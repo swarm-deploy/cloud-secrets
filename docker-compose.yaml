@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  example-app:
+    image: golang:1.24.7-alpine
+    ports:
+      - target: 8080
+        published: 8085
+        protocol: tcp
+        mode: host
+    volumes:
+      - ./:/app
+    working_dir: /app
+    command: go run ./examples/go-app/main.go
+    environment:
+      - MY_SECRET=/var/run/secrets/users-service-db-dsn
+    secrets:
+      - users-service-db-dsn
+
+  cloud-secrets:
+    image: golang:1.26.1-alpine
+    volumes:
+      - ./:/app
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    working_dir: /app
+    command: go run ./cmd/main.go
+    environment:
+      - CLOUDRU_PROJECT_ID=<cloudru-project-id>
+      - CLOUDRU_IAM_CLIENT_ID=/var/run/secrets/iam_id
+      - CLOUDRU_IAM_CLIENT_SECRET=/var/run/secrets/iam_secret
+      - LOG_LEVEL=debug
+      - CS_REFRESH_INTERVAL=1m
+    secrets:
+      - iam_id
+      - iam_secret
+
+secrets:
+  # Секреты для тестового приложения
+  users-service-db-dsn:
+    external: true
+  # Креды для IAM
+  iam_id:
+    external: true
+  iam_secret:
+    external: true
