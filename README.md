@@ -10,7 +10,7 @@ Supported cloud providers:
 ```mermaid
 flowchart TD
     A[cloud-secrets starts] --> B[Load config from env vars]
-    B --> C[Create Docker and Cloud clients]
+    B --> C["Create Docker Swarm<br/>and Cloud clients"]
     C --> E[Application sync loop]
 
     F[Trigger by timer] --> E
@@ -18,7 +18,7 @@ flowchart TD
 
     E --> G[Read secrets from Cloud]
     E --> H[Read secrets from Swarm]
-    G --> I[Compare by logical path and external version id]
+    G --> I["Compare by logical path<br/>and external version id"]
     H --> I
 
     I --> J{Secret state in Swarm}
@@ -26,7 +26,7 @@ flowchart TD
     J -->|version changed| L[Create new secret version]
     J -->|same version| M[Skip]
 
-    L --> N[Update services to use new secret ID]
+    L --> N["Update services to use new secret ID"]
     N --> R[Rolls updated service tasks]
     R --> O[Remove old versions]
     O --> S[Restore parent secret]
