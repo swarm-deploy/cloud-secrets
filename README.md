@@ -10,15 +10,14 @@ Supported cloud providers:
 ```mermaid
 flowchart TD
     A[cloud-secrets starts] --> B[Load config from env vars]
-    B --> C[Create Docker Swarm client]
-    B --> D[Create Cloud.ru provider IAM + Secret Manager]
+    B --> C[Create Docker and Cloud clients]
     C --> E[Application sync loop]
-    D --> E
 
-    F[Trigger sync by timer SS_REFRESH_INTERVAL or SIGHUP from cscli] --> E
+    F[Trigger by timer] --> E
+    Q[Trigger by SIGHUP] --> E
 
-    E --> G[Read external secrets from Cloud.ru]
-    E --> H[Read services and secrets from Docker Swarm]
+    E --> G[Read secrets from Cloud]
+    E --> H[Read secrets from Swarm]
     G --> I[Compare by logical path and external version id]
     H --> I
 
@@ -28,11 +27,12 @@ flowchart TD
     J -->|same version| M[Skip]
 
     L --> N[Update services to use new secret ID]
-    N --> R[Swarm rolls updated service tasks]
-    R --> O[Remove old versions and restore parent secret]
+    N --> R[Rolls updated service tasks]
+    R --> O[Remove old versions]
+    O --> S[Restore parent secret]
 
     K --> P[Write sync result logs]
-    O --> P
+    S --> P
     M --> P
 ```
 
