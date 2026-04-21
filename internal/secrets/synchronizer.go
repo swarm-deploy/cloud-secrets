@@ -56,9 +56,14 @@ func (s *Synchronizer) Sync(ctx context.Context) (Result, error) { //nolint:goco
 
 		swarmSecret, alreadyExists := swarmSecretsMap[fixedSecretPath]
 		if !alreadyExists {
+			payload, perr := s.secretProvider.GetSecretPayload(ctx, externalSecret.Path)
+			if perr != nil {
+				return result, fmt.Errorf("get payload of secret %q: %w", externalSecret.Path, perr)
+			}
+
 			err = s.engine.CreateSecret(ctx, engine.CreatingSecret{
 				Path:              fixedSecretPath,
-				Value:             externalSecret.Value,
+				Value:             payload,
 				ExternalPath:      externalSecret.Path,
 				ExternalVersionID: externalSecret.VersionID,
 			})
@@ -91,9 +96,14 @@ func (s *Synchronizer) Sync(ctx context.Context) (Result, error) { //nolint:goco
 			continue
 		}
 
+		payload, perr := s.secretProvider.GetSecretPayload(ctx, externalSecret.Path)
+		if perr != nil {
+			return result, fmt.Errorf("get payload of secret %q: %w", externalSecret.Path, perr)
+		}
+
 		secretPayload := engine.CreatingSecretVersion{
 			ExternalID: externalSecret.VersionID,
-			Value:      externalSecret.Value,
+			Value:      payload,
 		}
 
 		vers, verr := s.engine.CreateSecretVersion(ctx, *swarmSecret, secretPayload)
