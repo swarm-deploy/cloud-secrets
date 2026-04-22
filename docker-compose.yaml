@@ -25,16 +25,24 @@ services:
       - ./:/app
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     working_dir: /app
-    command: go run ./cmd/main.go
+    command: go run ./cmd/cloud-secrets/main.go
     environment:
+      - CS_PROVIDER=cloudru
+      - CS_LOG_LEVEL=debug
+      - CS_REFRESH_INTERVAL=1m
       - CLOUDRU_PROJECT_ID=<cloudru-project-id>
       - CLOUDRU_IAM_CLIENT_ID=/var/run/secrets/iam_id
       - CLOUDRU_IAM_CLIENT_SECRET=/var/run/secrets/iam_secret
-      - LOG_LEVEL=debug
-      - CS_REFRESH_INTERVAL=1m
+      # Vault mode example:
+      # - CS_PROVIDER=vault
+      # - VAULT_ADDRESS=http://vault:8200
+      # - VAULT_TOKEN=/var/run/secrets/vault_token
+      # - VAULT_MOUNT_PATH=secret
+      # - VAULT_PREFIX=cloud-secrets
     secrets:
       - iam_id
       - iam_secret
+      # - vault_token
     deploy:
       labels:
         - prometheus.port=8000
@@ -50,4 +58,7 @@ secrets:
   iam_id:
     external: true
   iam_secret:
+    external: true
+  # Токен для Vault (используется в режиме CS_PROVIDER=vault)
+  vault_token:
     external: true

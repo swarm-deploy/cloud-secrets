@@ -14,7 +14,7 @@ import (
 	"github.com/swarm-deploy/cloud-secrets/internal/config"
 	"github.com/swarm-deploy/cloud-secrets/internal/engine"
 	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
-	"github.com/swarm-deploy/cloud-secrets/internal/providers/cloudru"
+	"github.com/swarm-deploy/cloud-secrets/internal/providers"
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
 	"github.com/swarm-deploy/cloud-secrets/internal/secrets"
 )
@@ -48,9 +48,9 @@ func NewApplication(ctx context.Context, cfg config.Config, metricsGroup *metric
 
 	app.docker = dockerClient
 
-	slog.Info("[app] creating secret provider")
+	slog.Info("[app] creating secret provider", slog.String("provider", string(cfg.CloudSecrets.Provider)))
 
-	provider, err := cloudru.NewProvider(ctx, cfg.CloudRu, metricsGroup.Provider)
+	provider, err := providers.Create(ctx, cfg, metricsGroup.Provider)
 	if err != nil {
 		return nil, err
 	}
@@ -69,9 +69,9 @@ func NewApplication(ctx context.Context, cfg config.Config, metricsGroup *metric
 const sighupBuf = 3
 
 func (app *Application) Run(ctx context.Context) error {
-	slog.InfoContext(ctx, "setup ticker", slog.String("interval", app.cfg.SwarmSecrets.RefreshInterval.String()))
+	slog.InfoContext(ctx, "setup ticker", slog.String("interval", app.cfg.CloudSecrets.RefreshInterval.String()))
 
-	app.ticker = time.NewTicker(app.cfg.SwarmSecrets.RefreshInterval)
+	app.ticker = time.NewTicker(app.cfg.CloudSecrets.RefreshInterval)
 
 	sighupChannel := make(chan os.Signal, sighupBuf)
 
