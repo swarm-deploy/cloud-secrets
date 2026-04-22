@@ -1,21 +1,19 @@
-# Использование с HashiCorp Vault (KV v2)
+# Using HashiCorp Vault (KV v2)
 
-## Требования
-- Развёрнутый Vault, доступный с manager-нод Docker Swarm.
-- Включённый `KV v2` mount (например, `secret/`).
-- Vault token с правами `list` + `read` для `metadata` и `data` путей выбранного префикса.
-- Для локального примера ниже используется **Vault dev mode** (только для тестов).
+**Requirements**
+- A running Vault instance reachable from Docker Swarm manager nodes.
+- An enabled `KV v2` mount (for example, `secret/`).
+- A Vault token with `list` and `read` permissions for `metadata` and `data` paths under your selected prefix.
 
-## Как маппятся ключи Vault в Swarm
-- Каждый key внутри одного Vault секрета (`data`) синхронизируется как отдельный Docker Swarm secret.
-- Это правило действует всегда, даже если ключ только один.
-- Формат имени external path: `<vault-path>/<key>`.
-- Пример: если в `secret/cloud-secrets/users-db` лежат ключи `username` и `password`, то в Swarm появятся:
-  - `cloud-secrets/users-db/username`
-  - `cloud-secrets/users-db/password`
-- Если в секрете только один ключ `value`, то путь в Swarm будет `cloud-secrets/users-db/value`.
+## How Vault Keys Map to Swarm Secrets
+- Each key inside one Vault secret (`data`) is synchronized as a separate Docker Swarm secret.
+- This rule always applies, even when a Vault secret has only one key.
+- External path format: `<vault-path>/<key>`.
+- Example: if `secret/cloud-secrets/users-db` contains `username` and `password`, Swarm secrets will be:
+  - `cloud-secrets-users-db-username`
+  - `cloud-secrets-users-db-password`
 
-Пример policy для префикса `cloud-secrets/` в mount `secret`:
+Example policy for the `cloud-secrets/` prefix in the `secret` mount:
 
 ```hcl
 path "secret/metadata/cloud-secrets/*" {
@@ -27,12 +25,15 @@ path "secret/data/cloud-secrets/*" {
 }
 ```
 
-## 1) Полный docker-compose с Vault
+## Deploy
 
-Ниже полный `docker-compose.yaml` для локального сценария:
-- поднимает `vault` (dev mode),
-- инициализирует `kv-v2` mount и тестовый секрет (`vault-init`),
-- запускает `cloud-secrets` в режиме `CS_PROVIDER=vault`.
+Below is a full local `docker-compose.yaml` example that:
+- starts `vault` in dev mode,
+- initializes the `kv-v2` mount and a test secret via `vault-init`,
+- starts `cloud-secrets` with `CS_PROVIDER=vault`.
+
+<details>
+  <summary>docker-compose.yaml</summary>
 
 ```yaml
 version: '3.8'
@@ -93,29 +94,23 @@ secrets:
   vault_token:
     external: true
 ```
+</details>
 
-## 2) Создать Docker Swarm secret для токена из compose примера
+&raquo; &nbsp;1. Copy docker-compose.yaml
+
+<details>
+  <summary>2. Create a Docker Swarm Secret for the Vault Token</summary>
 
 ```sh
-echo "root-token" > vault_token
+printf %s "root-token" > vault_token
 docker secret create vault_token ./vault_token
 ```
+</details>
 
-## 3) Задеплоить стек
+<details>
+  <summary>3. Deploy the Stack</summary>
 
 ```sh
 docker stack deploy -c vault-compose.yaml cloud-secrets --detach=false
 ```
-
-## 4) Проверить синхронизацию
-
-1. Проверить первый запуск в логах сервиса (`secrets_created`, `secrets_updated`, `secrets_skipped`).
-2. Проверить ручной trigger через `SIGHUP`:
-
-```sh
-docker ps --filter "name=cloud-secrets_cloud-secrets" --format "{{.ID}}" | xargs -r docker kill --signal=SIGHUP
-```
-
-3. Проверить метрики:
-   - `cloud_secrets_provider_requests_total`
-   - `cloud_secrets_provider_request_duration_seconds`
+</details>
