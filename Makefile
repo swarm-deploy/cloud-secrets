@@ -6,6 +6,10 @@ test/cloudru:
 test/vault:
 	docker stack deploy -c tests/vault.yaml cloud-secrets-vault --detach=false
 
+.PHONY: test
+test:
+	go test ./...
+
 .PHONY: lint
 lint:
 	golangci-lint run

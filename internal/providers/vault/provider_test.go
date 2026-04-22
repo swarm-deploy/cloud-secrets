@@ -1,4 +1,4 @@
-package vault //nolint:testpackage // Tests validate provider behavior using package internals.
+package vault
 
 import (
 	"context"
