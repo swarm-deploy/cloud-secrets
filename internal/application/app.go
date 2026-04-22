@@ -52,7 +52,7 @@ func NewApplication(ctx context.Context, cfg config.Config, metricsGroup *metric
 
 	provider, err := providers.Create(ctx, cfg, metricsGroup.Provider)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create secret provider: %w", err)
 	}
 
 	app.secretProvider = provider
