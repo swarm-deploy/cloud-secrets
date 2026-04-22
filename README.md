@@ -3,7 +3,7 @@
 **cloud-secrets** - background service for update secrets in Docker Swarm cluster
 
 Supported cloud providers:
-- [Cloud.ru](https://cloud.ru/docs/scsm/ug/index)
+- [Cloud.ru Secret Manager](./docs/usage_cloudru.md)
 
 ## How it works
 
@@ -38,53 +38,3 @@ flowchart TD
 
 ## Monitoring
 - [Grafana dashboard](grafana-dashboard.json)
-
-## Usage
-
-### Usage with Cloud.ru
-
-#### Create IAM secrets
-```
-echo "<client-id>" > iam_id
-echo "<client-secret>" > iam_secret
-
-docker secret create iam_id ./iam_id
-docker secret create iam_secret ./iam_secret
-```
-
-##### Deploy Docker stack
-
-Run `docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false`
-
-docker-compose.yaml
-```yaml
-version: '3.8'
-
-services:
-  swarm-secrets:
-    image: swarmdeployorg/cloud-secrets:v0.1.0
-    ports:
-      - "8000:8000"
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-    environment:
-      - CS_REFRESH_INTERVAL=10s
-      - CLOUDRU_PROJECT_ID=<uuid>
-      - CLOUDRU_IAM_CLIENT_ID=/var/run/secrets/iam_id
-      - CLOUDRU_IAM_CLIENT_SECRET=/var/run/secrets/iam_secret
-    secrets:
-      - iam_id
-      - iam_secret
-    deploy:
-      labels:
-        - prometheus.port=8000
-      placement:
-        constraints:
-          - node.role == manager
-
-secrets:
-  iam_id:
-    external: true
-  iam_secret:
-    external: true
-```
