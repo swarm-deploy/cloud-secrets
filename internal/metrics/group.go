@@ -4,6 +4,7 @@ import "github.com/prometheus/client_golang/prometheus"
 
 // Group contains all metrics subsystems and exposes a single collector.
 type Group struct {
+	BuildInfo BuildInfo
 	// Docker contains Docker API metrics.
 	Docker Docker
 	// Provider contains cloud provider API metrics.
@@ -31,6 +32,9 @@ func NewGroup(params CreateGroupParams) *Group {
 	group := &Group{
 		collectors: make([]prometheus.Collector, 0),
 	}
+
+	group.BuildInfo = newPrometheusBuildInfo(params.Namespace)
+	group.register(group.BuildInfo)
 
 	group.Docker = newPrometheusDocker(params.Namespace)
 	group.register(group.Docker)

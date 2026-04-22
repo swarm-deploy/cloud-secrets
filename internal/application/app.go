@@ -66,10 +66,7 @@ func NewApplication(ctx context.Context, cfg config.Config, metricsGroup *metric
 	return app, nil
 }
 
-const (
-	sighupBuf              = 3
-	metricsShutdownTimeout = 10 * time.Second
-)
+const sighupBuf = 3
 
 func (app *Application) Run(ctx context.Context) error {
 	slog.InfoContext(ctx, "setup ticker", slog.String("interval", app.cfg.SwarmSecrets.RefreshInterval.String()))

@@ -26,4 +26,14 @@ COPY --from=builder /go/bin/cloud-secrets /go/bin/cloud-secrets
 
 EXPOSE 8000
 
+LABEL org.opencontainers.image.title="cloud-secrets"
+LABEL org.opencontainers.image.description="Background service for update secrets in Docker Swarm cluster"
+LABEL org.opencontainers.image.url="https://github.com/swarm-deploy/cloud-secrets"
+LABEL org.opencontainers.image.source="https://github.com/swarm-deploy/cloud-secrets"
+LABEL org.opencontainers.image.vendor="swarm-deploy"
+LABEL org.opencontainers.image.version="$APP_VERSION"
+LABEL org.opencontainers.image.created="$BUILD_TIME"
+LABEL org.opencontainers.image.licenses="Apache 2.0"
+LABEL org.swarm-deploy.service.type="SecretManager"
+
 ENTRYPOINT ["/go/bin/cloud-secrets"]

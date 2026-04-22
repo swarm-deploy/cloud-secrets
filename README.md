@@ -54,7 +54,7 @@ docker secret create iam_secret ./iam_secret
 
 ##### Deploy Docker stack
 
-Run `docker stack deploy -c docker-compose.yaml swarm-secrets --detach=false`
+Run `docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false`
 
 docker-compose.yaml
 ```yaml
@@ -69,14 +69,18 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     environment:
       - CS_REFRESH_INTERVAL=10s
-      - CS_METRICS_ADDRESS=:8000
-      - CS_METRICS_PATH=/metrics
-      - CLOUDRU_PROJECT_ID=befcb5e3-78d6-4a1a-a6c2-79faf67985d3
+      - CLOUDRU_PROJECT_ID=<uuid>
       - CLOUDRU_IAM_CLIENT_ID=/var/run/secrets/iam_id
       - CLOUDRU_IAM_CLIENT_SECRET=/var/run/secrets/iam_secret
     secrets:
       - iam_id
       - iam_secret
+    deploy:
+      labels:
+        - prometheus.port=8000
+      placement:
+        constraints:
+          - node.role == manager
 
 secrets:
   iam_id:

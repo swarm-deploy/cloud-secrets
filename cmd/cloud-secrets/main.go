@@ -16,10 +16,17 @@ import (
 	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
 )
 
+var (
+	Version   = "0.1.0"
+	BuildDate = "2026-04-22 20:46:00"
+)
+
 func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	})))
+
+	slog.Info("[main] starting cloud-secrets", slog.String("version", Version), slog.String("build_date", BuildDate))
 
 	slog.Info("[main] parse config")
 
@@ -46,6 +53,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	metricsGroup.BuildInfo.Set(Version, BuildDate)
+
 	app, err := application.NewApplication(initCtx, cfg, metricsGroup)
 	if err != nil {
 		slog.Error("[main] failed to create application", slog.Any("err", err))
@@ -63,7 +72,7 @@ func main() {
 				return app.Close()
 			},
 		},
-		entrypoint.HTTPServer("health-server", createMetricsServer()),
+		entrypoint.HTTPServer("health-server", createHealthServer()),
 	})
 	if err != nil {
 		slog.Error("[main] failed to run entrypoints", slog.Any("err", err))
@@ -73,11 +82,11 @@ func main() {
 
 const metricsReadHeaderTimeout = 10 * time.Second
 
-func createMetricsServer() *http.Server {
+func createHealthServer() *http.Server {
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.Handler())
 	return &http.Server{
-		Addr:              ":8001",
+		Addr:              ":8000",
 		Handler:           mux,
 		ReadHeaderTimeout: metricsReadHeaderTimeout,
 	}
