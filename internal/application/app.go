@@ -13,6 +13,7 @@ import (
 	dock "github.com/moby/moby/client"
 	"github.com/swarm-deploy/cloud-secrets/internal/config"
 	"github.com/swarm-deploy/cloud-secrets/internal/engine"
+	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/cloudru"
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
 	"github.com/swarm-deploy/cloud-secrets/internal/secrets"
@@ -20,6 +21,8 @@ import (
 
 type Application struct {
 	cfg config.Config
+
+	metrics *metrics.Group
 
 	secretProvider contracts.Provider
 
@@ -32,9 +35,10 @@ type Application struct {
 	synchronizing atomic.Bool
 }
 
-func NewApplication(ctx context.Context, cfg config.Config) (*Application, error) {
+func NewApplication(ctx context.Context, cfg config.Config, metricsGroup *metrics.Group) (*Application, error) {
 	app := &Application{
-		cfg: cfg,
+		cfg:     cfg,
+		metrics: metricsGroup,
 	}
 
 	dockerClient, err := dock.New(dock.FromEnv, dock.WithAPIVersionFromEnv())
@@ -46,19 +50,26 @@ func NewApplication(ctx context.Context, cfg config.Config) (*Application, error
 
 	slog.Info("[app] creating secret provider")
 
-	provider, err := cloudru.NewProvider(ctx, cfg.CloudRu)
+	provider, err := cloudru.NewProvider(ctx, cfg.CloudRu, metricsGroup.Provider)
 	if err != nil {
 		return nil, err
 	}
 
 	app.secretProvider = provider
 
-	app.synchronizer = secrets.NewSynchronizer(engine.NewClient(dockerClient), provider)
+	app.synchronizer = secrets.NewSynchronizer(
+		engine.NewClient(dockerClient, metricsGroup.Docker),
+		provider,
+		metricsGroup.Secrets,
+	)
 
 	return app, nil
 }
 
-const sighupBuf = 3
+const (
+	sighupBuf              = 3
+	metricsShutdownTimeout = 10 * time.Second
+)
 
 func (app *Application) Run(ctx context.Context) error {
 	slog.InfoContext(ctx, "setup ticker", slog.String("interval", app.cfg.SwarmSecrets.RefreshInterval.String()))
@@ -79,7 +90,10 @@ func (app *Application) Run(ctx context.Context) error {
 
 		slog.DebugContext(ctx, "run sync")
 
+		app.metrics.Syncs.RecordRun(channel)
+
 		result, err := app.synchronizer.Sync(ctx)
+		app.metrics.Syncs.SetLastSyncAt(time.Now())
 		if err != nil {
 			slog.ErrorContext(ctx, "failed to sync secrets", slog.Any("err", err))
 		}

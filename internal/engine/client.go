@@ -9,14 +9,19 @@ import (
 	"github.com/google/uuid"
 	"github.com/moby/moby/api/types/swarm"
 	dock "github.com/moby/moby/client"
+	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
 )
 
 type Client struct {
-	client dock.APIClient
+	client  dock.APIClient
+	metrics metrics.Docker
 }
 
-func NewClient(client dock.APIClient) *Client {
-	return &Client{client: client}
+func NewClient(client dock.APIClient, dockerMetrics metrics.Docker) *Client {
+	return &Client{
+		client:  client,
+		metrics: dockerMetrics,
+	}
 }
 
 type CreatingSecret struct {
@@ -58,6 +63,11 @@ type ExistingSecretVersion struct {
 }
 
 func (c *Client) RemoveSecret(ctx context.Context, id string) error {
+	startedAt := time.Now()
+	defer func() {
+		c.metrics.RecordRequest("remove_secret", time.Since(startedAt))
+	}()
+
 	_, err := c.client.SecretRemove(ctx, id, dock.SecretRemoveOptions{})
 	if err != nil {
 		return fmt.Errorf("remove secret in swarm: %w", err)
@@ -71,6 +81,11 @@ func (c *Client) CreateSecretVersion(
 	secret ExistingSecret,
 	version CreatingSecretVersion,
 ) (CreatedSecretVersion, error) {
+	startedAt := time.Now()
+	defer func() {
+		c.metrics.RecordRequest("create_secret_version", time.Since(startedAt))
+	}()
+
 	name := uuid.NewString()
 
 	resp, err := c.client.SecretCreate(ctx, dock.SecretCreateOptions{
@@ -97,6 +112,11 @@ func (c *Client) CreateSecretVersion(
 }
 
 func (c *Client) CreateSecret(ctx context.Context, spec CreatingSecret) error {
+	startedAt := time.Now()
+	defer func() {
+		c.metrics.RecordRequest("create_secret", time.Since(startedAt))
+	}()
+
 	_, err := c.client.SecretCreate(ctx, dock.SecretCreateOptions{
 		Spec: swarm.SecretSpec{
 			Annotations: swarm.Annotations{
@@ -114,10 +134,13 @@ func (c *Client) CreateSecret(ctx context.Context, spec CreatingSecret) error {
 }
 
 func (c *Client) MapSecrets(ctx context.Context) (map[string]*ExistingSecret, error) {
+	startedAt := time.Now()
+
 	secrets, err := c.client.SecretList(ctx, dock.SecretListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("list swarm secrets: %w", err)
 	}
+	c.metrics.RecordRequest("list_secrets", time.Since(startedAt))
 
 	slog.DebugContext(ctx, "[engine] fetched secrets", slog.Int("secrets.count", len(secrets.Items)))
 
@@ -135,7 +158,7 @@ func (c *Client) MapSecrets(ctx context.Context) (map[string]*ExistingSecret, er
 			Path:         path,
 			ExternalPath: c.getLabel(secret.Spec.Labels, "external_path"),
 			Versions: []ExistingSecretVersion{
-				ExistingSecretVersion{
+				{
 					ID:         secret.ID,
 					ExternalID: c.getLabel(secret.Spec.Labels, "external_version_id"),
 					updatedAt:  secret.UpdatedAt,

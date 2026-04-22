@@ -8,18 +8,25 @@ import (
 
 	"github.com/moby/moby/api/types/swarm"
 	"github.com/swarm-deploy/cloud-secrets/internal/engine"
+	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
 )
 
 type Synchronizer struct {
 	engine         *engine.Client
 	secretProvider contracts.Provider
+	metrics        metrics.Secrets
 }
 
-func NewSynchronizer(engine *engine.Client, secretProvider contracts.Provider) *Synchronizer {
+func NewSynchronizer(
+	engine *engine.Client,
+	secretProvider contracts.Provider,
+	secretsMetrics metrics.Secrets,
+) *Synchronizer {
 	return &Synchronizer{
 		engine:         engine,
 		secretProvider: secretProvider,
+		metrics:        secretsMetrics,
 	}
 }
 
@@ -72,6 +79,7 @@ func (s *Synchronizer) Sync(ctx context.Context) (Result, error) { //nolint:goco
 			}
 
 			result.Created++
+			s.metrics.IncCreated()
 
 			continue
 		}
@@ -131,6 +139,7 @@ func (s *Synchronizer) Sync(ctx context.Context) (Result, error) { //nolint:goco
 		})
 
 		result.Updated++
+		s.metrics.IncUpdated()
 	}
 
 	if len(pendingServices.services) == 0 && len(pendingServices.secrets) == 0 {

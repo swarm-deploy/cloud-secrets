@@ -19,6 +19,8 @@ services:
 
   cloud-secrets:
     image: golang:1.26.1-alpine
+    ports:
+      - "8000:8000"
     volumes:
       - ./:/app
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
@@ -30,6 +32,8 @@ services:
       - CLOUDRU_IAM_CLIENT_SECRET=/var/run/secrets/iam_secret
       - LOG_LEVEL=debug
       - CS_REFRESH_INTERVAL=1m
+      - CS_METRICS_ADDRESS=:8000
+      - CS_METRICS_PATH=/metrics
     secrets:
       - iam_id
       - iam_secret

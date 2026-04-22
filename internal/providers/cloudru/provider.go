@@ -13,6 +13,7 @@ import (
 	"google.golang.org/grpc/credentials"
 
 	smssdk "github.com/cloudru-tech/secret-manager-sdk"
+	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 )
@@ -21,11 +22,13 @@ type Provider struct {
 	cfg Config
 
 	secretManager *smssdk.Client
+	metrics       metrics.Provider
 }
 
-func NewProvider(ctx context.Context, cfg Config) (*Provider, error) {
+func NewProvider(ctx context.Context, cfg Config, providerMetrics metrics.Provider) (*Provider, error) {
 	p := &Provider{
-		cfg: cfg,
+		cfg:     cfg,
+		metrics: providerMetrics,
 	}
 
 	slog.Info("[cloudru] resolving endpoints")

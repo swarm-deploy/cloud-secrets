@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"time"
 
 	v2 "github.com/cloudru-tech/secret-manager-sdk/api/v2"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -12,6 +13,11 @@ import (
 )
 
 func (p *Provider) GetSecretPayload(ctx context.Context, key string) ([]byte, error) {
+	startedAt := time.Now()
+	defer func() {
+		p.metrics.RecordRequest("get_secret_payload", time.Since(startedAt))
+	}()
+
 	resp, err := p.secretManager.V2.SecretService.Access(ctx, &v2.AccessSecretRequest{
 		Path:      key,
 		ProjectId: p.cfg.ProjectID,
@@ -24,6 +30,11 @@ func (p *Provider) GetSecretPayload(ctx context.Context, key string) ([]byte, er
 }
 
 func (p *Provider) CreateSecret(ctx context.Context, secret contracts.Secret, payload []byte) error {
+	startedAt := time.Now()
+	defer func() {
+		p.metrics.RecordRequest("create_secret", time.Since(startedAt))
+	}()
+
 	_, err := p.secretManager.V2.SecretService.Create(ctx, &v2.CreateSecretRequest{
 		Path:      secret.Path,
 		Payload:   wrapperspb.Bytes(payload),
@@ -36,6 +47,11 @@ func (p *Provider) CreateSecret(ctx context.Context, secret contracts.Secret, pa
 }
 
 func (p *Provider) ListSecrets(ctx context.Context) (map[string]contracts.Secret, error) {
+	startedAt := time.Now()
+	defer func() {
+		p.metrics.RecordRequest("list_secrets", time.Since(startedAt))
+	}()
+
 	secretsResp, err := p.secretManager.V2.SecretService.Search(ctx, &v2.SearchSecretRequest{
 		ProjectId: p.cfg.ProjectID,
 		Depth:     -1,

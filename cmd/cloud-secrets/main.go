@@ -3,13 +3,17 @@ package main
 import (
 	"context"
 	"log/slog"
+	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
+	"time"
 
+	"github.com/artarts36/go-entrypoint"
 	"github.com/caarlos0/env/v11"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/swarm-deploy/cloud-secrets/internal/application"
 	"github.com/swarm-deploy/cloud-secrets/internal/config"
+	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
 )
 
 func main() {
@@ -32,33 +36,49 @@ func main() {
 
 	slog.Info("[main] creating application")
 
-	ctx, cancel := context.WithCancel(context.Background())
+	initCtx, cancel := context.WithTimeout(context.Background(), time.Minute)
 
-	app, err := application.NewApplication(ctx, cfg)
+	metricsGroup := metrics.NewGroup(metrics.CreateGroupParams{
+		Namespace: "cloud_secrets",
+	})
+	if err = prometheus.Register(metricsGroup); err != nil {
+		slog.Error("[main] failed to register metrics", slog.Any("err", err))
+		os.Exit(1)
+	}
+
+	app, err := application.NewApplication(initCtx, cfg, metricsGroup)
 	if err != nil {
 		slog.Error("[main] failed to create application", slog.Any("err", err))
 		os.Exit(1)
 	}
+	cancel()
 
 	slog.Info("[main] running application")
 
-	ch := make(chan os.Signal, 1)
-
-	signal.Notify(ch, syscall.SIGTERM)
-
-	go func() {
-		for range ch {
-			cancel()
-			closeErr := app.Close()
-			if closeErr != nil {
-				slog.Error("[main] failed to close application", slog.Any("err", closeErr))
-			}
-		}
-	}()
-
-	err = app.Run(ctx)
+	err = entrypoint.Run([]entrypoint.Entrypoint{
+		{
+			Name: "application",
+			Run:  app.Run,
+			Stop: func(context.Context) error {
+				return app.Close()
+			},
+		},
+		entrypoint.HTTPServer("health-server", createMetricsServer()),
+	})
 	if err != nil {
-		slog.Error("[main] failed to run application", slog.Any("err", err))
+		slog.Error("[main] failed to run entrypoints", slog.Any("err", err))
 		os.Exit(1)
+	}
+}
+
+const metricsReadHeaderTimeout = 10 * time.Second
+
+func createMetricsServer() *http.Server {
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.Handler())
+	return &http.Server{
+		Addr:              ":8001",
+		Handler:           mux,
+		ReadHeaderTimeout: metricsReadHeaderTimeout,
 	}
 }

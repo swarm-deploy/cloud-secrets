@@ -36,6 +36,9 @@ flowchart TD
     M --> P
 ```
 
+## Monitoring
+- [Grafana dashboard](grafana-dashboard.json)
+
 ## Usage
 
 ### Usage with Cloud.ru
@@ -59,11 +62,15 @@ version: '3.8'
 
 services:
   swarm-secrets:
-    image: swarmdeployorg/swarm-secrets:0.1.0
+    image: swarmdeployorg/cloud-secrets:v0.1.0
+    ports:
+      - "8000:8000"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     environment:
-      - SS_REFRESH_INTERVAL=10s
+      - CS_REFRESH_INTERVAL=10s
+      - CS_METRICS_ADDRESS=:8000
+      - CS_METRICS_PATH=/metrics
       - CLOUDRU_PROJECT_ID=befcb5e3-78d6-4a1a-a6c2-79faf67985d3
       - CLOUDRU_IAM_CLIENT_ID=/var/run/secrets/iam_id
       - CLOUDRU_IAM_CLIENT_SECRET=/var/run/secrets/iam_secret
