@@ -6,6 +6,15 @@
 - Vault token с правами `list` + `read` для `metadata` и `data` путей выбранного префикса.
 - Для локального примера ниже используется **Vault dev mode** (только для тестов).
 
+## Как маппятся ключи Vault в Swarm
+- Каждый key внутри одного Vault секрета (`data`) синхронизируется как отдельный Docker Swarm secret.
+- Это правило действует всегда, даже если ключ только один.
+- Формат имени external path: `<vault-path>/<key>`.
+- Пример: если в `secret/cloud-secrets/users-db` лежат ключи `username` и `password`, то в Swarm появятся:
+  - `cloud-secrets/users-db/username`
+  - `cloud-secrets/users-db/password`
+- Если в секрете только один ключ `value`, то путь в Swarm будет `cloud-secrets/users-db/value`.
+
 Пример policy для префикса `cloud-secrets/` в mount `secret`:
 
 ```hcl
@@ -95,7 +104,7 @@ docker secret create vault_token ./vault_token
 ## 3) Задеплоить стек
 
 ```sh
-docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false
+docker stack deploy -c vault-compose.yaml cloud-secrets --detach=false
 ```
 
 ## 4) Проверить синхронизацию

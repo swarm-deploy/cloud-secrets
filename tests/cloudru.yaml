@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   example-app:
-    image: golang:1.24.7-alpine
+    image: golang:1.26.1-alpine
     ports:
       - target: 8080
         published: 8085
@@ -33,12 +33,6 @@ services:
       - CLOUDRU_PROJECT_ID=<cloudru-project-id>
       - CLOUDRU_IAM_CLIENT_ID=/var/run/secrets/iam_id
       - CLOUDRU_IAM_CLIENT_SECRET=/var/run/secrets/iam_secret
-      # Vault mode example:
-      # - CS_PROVIDER=vault
-      # - VAULT_ADDRESS=http://vault:8200
-      # - VAULT_TOKEN=/var/run/secrets/vault_token
-      # - VAULT_MOUNT_PATH=secret
-      # - VAULT_PREFIX=cloud-secrets
     secrets:
       - iam_id
       - iam_secret

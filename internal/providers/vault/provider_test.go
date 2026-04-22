@@ -22,19 +22,33 @@ func TestProviderListSecrets(t *testing.T) {
 	secrets, err := provider.ListSecrets(context.Background())
 	require.NoError(t, err)
 
-	require.Len(t, secrets, 3)
+	require.Len(t, secrets, 6)
 	assert.Equal(t, contracts.Secret{
-		Path:      "cloud-secrets/db",
+		Path:      "cloud-secrets/db/value",
 		VersionID: "2",
-	}, secrets["cloud-secrets/db"])
+	}, secrets["cloud-secrets/db/value"])
 	assert.Equal(t, contracts.Secret{
-		Path:      "cloud-secrets/nested/api",
-		VersionID: "7",
-	}, secrets["cloud-secrets/nested/api"])
-	assert.Equal(t, contracts.Secret{
-		Path:      "cloud-secrets/json",
+		Path:      "cloud-secrets/json/password",
 		VersionID: "3",
-	}, secrets["cloud-secrets/json"])
+	}, secrets["cloud-secrets/json/password"])
+	assert.Equal(t, contracts.Secret{
+		Path:      "cloud-secrets/json/username",
+		VersionID: "3",
+	}, secrets["cloud-secrets/json/username"])
+	assert.Equal(t, contracts.Secret{
+		Path:      "cloud-secrets/nested/api/value",
+		VersionID: "7",
+	}, secrets["cloud-secrets/nested/api/value"])
+	assert.Equal(t, contracts.Secret{
+		Path:      "cloud-secrets/mixed/password",
+		VersionID: "5",
+	}, secrets["cloud-secrets/mixed/password"])
+	assert.Equal(t, contracts.Secret{
+		Path:      "cloud-secrets/mixed/value",
+		VersionID: "5",
+	}, secrets["cloud-secrets/mixed/value"])
+	assert.NotContains(t, secrets, "cloud-secrets/db")
+	assert.NotContains(t, secrets, "cloud-secrets/nested/api")
 }
 
 func TestProviderGetSecretPayload(t *testing.T) {
@@ -44,22 +58,69 @@ func TestProviderGetSecretPayload(t *testing.T) {
 	provider := newTestProvider(t, server.URL)
 
 	t.Run("value key", func(t *testing.T) {
-		payload, err := provider.GetSecretPayload(context.Background(), "cloud-secrets/db")
+		payload, err := provider.GetSecretPayload(context.Background(), "cloud-secrets/db/value")
 		require.NoError(t, err)
 		assert.Equal(t, []byte("postgres://dsn"), payload)
 	})
 
-	t.Run("json payload", func(t *testing.T) {
-		payload, err := provider.GetSecretPayload(context.Background(), "cloud-secrets/json")
+	t.Run("json key payload", func(t *testing.T) {
+		payload, err := provider.GetSecretPayload(context.Background(), "cloud-secrets/json/password")
 		require.NoError(t, err)
-
-		var data map[string]string
-		require.NoError(t, json.Unmarshal(payload, &data))
-		assert.Equal(t, map[string]string{
-			"password": "secret",
-			"username": "svc",
-		}, data)
+		assert.Equal(t, []byte("secret"), payload)
 	})
+
+	t.Run("multi field payload with value key", func(t *testing.T) {
+		payload, err := provider.GetSecretPayload(context.Background(), "cloud-secrets/mixed/password")
+		require.NoError(t, err)
+		assert.Equal(t, []byte("secret"), payload)
+	})
+
+	t.Run("base path is invalid in always multi-key mode", func(t *testing.T) {
+		_, err := provider.GetSecretPayload(context.Background(), "cloud-secrets/db")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "key")
+	})
+}
+
+func TestConfigValidate_NormalizesTokenFromFileContent(t *testing.T) {
+	parsedAddress, err := url.Parse("https://vault.local")
+	require.NoError(t, err)
+
+	var token Token
+	err = token.UnmarshalText([]byte(" \nroot-token\r\n"))
+	require.NoError(t, err)
+
+	cfg := Config{
+		Address:   *parsedAddress,
+		Token:     token,
+		MountPath: "/secret/",
+		Prefix:    "/cloud-secrets/",
+	}
+
+	err = cfg.Validate()
+	require.NoError(t, err)
+	assert.Equal(t, "root-token", cfg.Token.Value)
+	assert.Equal(t, "secret", cfg.MountPath)
+	assert.Equal(t, "cloud-secrets", cfg.Prefix)
+}
+
+func TestConfigValidate_RejectsEmptyToken(t *testing.T) {
+	parsedAddress, err := url.Parse("https://vault.local")
+	require.NoError(t, err)
+
+	var token Token
+	err = token.UnmarshalText([]byte("  \n\t"))
+	require.NoError(t, err)
+
+	cfg := Config{
+		Address:   *parsedAddress,
+		Token:     token,
+		MountPath: "secret",
+	}
+
+	err = cfg.Validate()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "VAULT_TOKEN is required")
 }
 
 func newTestProvider(t *testing.T, address string) *Provider {
@@ -68,9 +129,9 @@ func newTestProvider(t *testing.T, address string) *Provider {
 	parsedAddress, err := url.Parse(address)
 	require.NoError(t, err)
 
-	provider, err := NewProvider(context.Background(), Config{
+	provider, err := NewProvider(Config{
 		Address:   *parsedAddress,
-		Token:     "token",
+		Token:     Token{Value: "token"},
 		MountPath: "secret",
 		Prefix:    "cloud-secrets",
 	})
@@ -86,7 +147,7 @@ func newVaultServer(t *testing.T) *httptest.Server {
 		switch {
 		case isListRequest(r, "/v1/secret/metadata/cloud-secrets"):
 			writeVaultData(w, map[string]interface{}{
-				"keys": []interface{}{"db", "json", "nested/"},
+				"keys": []interface{}{"db", "json", "mixed", "nested/"},
 			})
 		case isListRequest(r, "/v1/secret/metadata/cloud-secrets/nested"):
 			writeVaultData(w, map[string]interface{}{
@@ -99,6 +160,8 @@ func newVaultServer(t *testing.T) *httptest.Server {
 			writeVaultData(w, map[string]interface{}{"current_version": 3})
 		case r.Method == http.MethodGet && r.URL.Path == "/v1/secret/metadata/cloud-secrets/nested/api":
 			writeVaultData(w, map[string]interface{}{"current_version": 7})
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/secret/metadata/cloud-secrets/mixed":
+			writeVaultData(w, map[string]interface{}{"current_version": 5})
 
 		case r.Method == http.MethodGet && r.URL.Path == "/v1/secret/data/cloud-secrets/db":
 			writeVaultData(w, map[string]interface{}{
@@ -110,6 +173,19 @@ func newVaultServer(t *testing.T) *httptest.Server {
 			writeVaultData(w, map[string]interface{}{
 				"data": map[string]interface{}{
 					"username": "svc",
+					"password": "secret",
+				},
+			})
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/secret/data/cloud-secrets/nested/api":
+			writeVaultData(w, map[string]interface{}{
+				"data": map[string]interface{}{
+					"value": "nested-token",
+				},
+			})
+		case r.Method == http.MethodGet && r.URL.Path == "/v1/secret/data/cloud-secrets/mixed":
+			writeVaultData(w, map[string]interface{}{
+				"data": map[string]interface{}{
+					"value":    "postgres://dsn",
 					"password": "secret",
 				},
 			})

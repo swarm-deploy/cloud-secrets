@@ -22,7 +22,7 @@ func NewProvider(cfg Config) (*Provider, error) {
 		return nil, fmt.Errorf("create vault client: %w", err)
 	}
 
-	client.SetToken(cfg.Token)
+	client.SetToken(cfg.Token.Value)
 
 	cfg.MountPath = strings.Trim(cfg.MountPath, "/")
 	cfg.Prefix = strings.Trim(cfg.Prefix, "/")

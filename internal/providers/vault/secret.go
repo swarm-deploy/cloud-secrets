@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -17,32 +18,30 @@ func (p *Provider) GetSecretPayload(ctx context.Context, key string) ([]byte, er
 		return nil, errors.New("secret path is empty")
 	}
 
-	secret, err := p.client.Logical().ReadWithContext(ctx, p.dataPath(secretPath))
+	basePath, keyName, splitErr := splitSecretKeyPath(secretPath)
+	if splitErr != nil {
+		return nil, fmt.Errorf("invalid secret path %q: %w", secretPath, splitErr)
+	}
+
+	baseData, err := p.readSecretData(ctx, basePath)
 	if err != nil {
-		return nil, fmt.Errorf("read secret %q: %w", secretPath, err)
-	}
-	if secret == nil {
-		return nil, fmt.Errorf("secret %q not found", secretPath)
+		return nil, fmt.Errorf("read parent secret %q for key %q: %w", basePath, keyName, err)
 	}
 
-	rawData, ok := secret.Data["data"]
+	value, ok := baseData[keyName]
 	if !ok {
-		return nil, fmt.Errorf("secret %q has no data payload", secretPath)
+		return nil, fmt.Errorf("secret %q key %q not found", basePath, keyName)
 	}
 
-	data, ok := rawData.(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("secret %q payload has unexpected type %T", secretPath, rawData)
-	}
-
-	payload, err := extractPayload(data)
-	if err != nil {
-		return nil, fmt.Errorf("extract payload for %q: %w", secretPath, err)
+	payload, payloadErr := toBytes(value)
+	if payloadErr != nil {
+		return nil, fmt.Errorf("convert payload for %q key %q: %w", basePath, keyName, payloadErr)
 	}
 
 	return payload, nil
 }
 
+//nolint:gocognit // clear flow for traversal and key expansion
 func (p *Provider) ListSecrets(ctx context.Context) (map[string]contracts.Secret, error) {
 	secrets := make(map[string]contracts.Secret)
 
@@ -75,9 +74,24 @@ func (p *Provider) ListSecrets(ctx context.Context) (map[string]contracts.Secret
 				return nil, fmt.Errorf("read current version for %q: %w", fullPath, versionErr)
 			}
 
-			secrets[fullPath] = contracts.Secret{
-				Path:      fullPath,
-				VersionID: versionID,
+			keyNames, keysErr := p.readSecretKeys(ctx, fullPath)
+			if keysErr != nil {
+				return nil, fmt.Errorf("read keys for %q: %w", fullPath, keysErr)
+			}
+
+			for _, keyName := range keyNames {
+				if keyName == "" {
+					return nil, fmt.Errorf("secret %q contains empty key", fullPath)
+				}
+				if strings.Contains(keyName, "/") {
+					return nil, fmt.Errorf("secret %q has unsupported key %q containing /", fullPath, keyName)
+				}
+
+				secretPath := joinPath(fullPath, keyName)
+				secrets[secretPath] = contracts.Secret{
+					Path:      secretPath,
+					VersionID: versionID,
+				}
 			}
 		}
 	}
@@ -134,6 +148,43 @@ func (p *Provider) readCurrentVersion(ctx context.Context, path string) (string,
 	return parseVersion(rawVersion)
 }
 
+func (p *Provider) readSecretKeys(ctx context.Context, path string) ([]string, error) {
+	data, err := p.readSecretData(ctx, path)
+	if err != nil {
+		return nil, err
+	}
+
+	keys := make([]string, 0, len(data))
+	for key := range data {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	return keys, nil
+}
+
+func (p *Provider) readSecretData(ctx context.Context, path string) (map[string]interface{}, error) {
+	secret, err := p.client.Logical().ReadWithContext(ctx, p.dataPath(path))
+	if err != nil {
+		return nil, fmt.Errorf("read secret %q: %w", path, err)
+	}
+	if secret == nil {
+		return nil, fmt.Errorf("secret %q not found", path)
+	}
+
+	rawData, ok := secret.Data["data"]
+	if !ok {
+		return nil, fmt.Errorf("secret %q has no data payload", path)
+	}
+
+	data, ok := rawData.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("secret %q payload has unexpected type %T", path, rawData)
+	}
+
+	return data, nil
+}
+
 func parseVersion(rawVersion interface{}) (string, error) {
 	switch value := rawVersion.(type) {
 	case string:
@@ -154,20 +205,6 @@ func parseVersion(rawVersion interface{}) (string, error) {
 	default:
 		return "", fmt.Errorf("unsupported version type %T", rawVersion)
 	}
-}
-
-func extractPayload(data map[string]interface{}) ([]byte, error) {
-	if value, ok := data["value"]; ok {
-		return toBytes(value)
-	}
-
-	if len(data) == 1 {
-		for _, value := range data {
-			return toBytes(value)
-		}
-	}
-
-	return json.Marshal(data)
 }
 
 func toBytes(value interface{}) ([]byte, error) {
@@ -212,4 +249,15 @@ func joinPath(parent string, child string) string {
 	}
 
 	return parent + "/" + child
+}
+
+func splitSecretKeyPath(path string) (secretPath string, keyName string, err error) {
+	idx := strings.LastIndex(path, "/")
+	if idx <= 0 || idx == len(path)-1 {
+		return "", "", fmt.Errorf("secret path %q does not contain a key segment", path)
+	}
+
+	secretPath = path[:idx]
+	keyName = path[idx+1:]
+	return secretPath, keyName, nil
 }
