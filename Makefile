@@ -1,6 +1,14 @@
+.PHONY: test/cloudru
+test/cloudru:
+	docker stack deploy -c tests/cloudru.yaml cloud-secrets-cloudru --detach=false
+
+.PHONY: test/vault
+test/vault:
+	docker stack deploy -c tests/vault.yaml cloud-secrets-vault --detach=false
+
 .PHONY: test
 test:
-	docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false
+	go test ./...
 
 .PHONY: lint
 lint:

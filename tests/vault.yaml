@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  example-app:
+    image: golang:1.26.1-alpine
+    ports:
+      - target: 8080
+        published: 8085
+        protocol: tcp
+        mode: host
+    volumes:
+      - ./../:/app
+    working_dir: /app
+    command: go run ./examples/go-app/main.go
+    environment:
+      - MY_SECRET=/var/run/secrets/cloud-secrets-users-service-db-dsn-value
+    secrets:
+      - cloud-secrets-users-service-db-dsn-value
+
+  vault:
+    image: hashicorp/vault:1.18
+    ports:
+      - "8200:8200"
+    cap_add:
+      - IPC_LOCK
+    command: vault server -dev -dev-root-token-id=root-token -dev-listen-address=0.0.0.0:8200
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+
+  vault-init:
+    image: hashicorp/vault:1.18
+    environment:
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_TOKEN=root-token
+    command: >
+      sh -ec "
+        until vault status >/dev/null 2>&1; do sleep 1; done;
+        vault secrets enable -path=secret kv-v2 || true;
+        vault kv put secret/cloud-secrets/users-service-db-dsn value='postgres://user:pass@db:5432/app';
+      "
+    deploy:
+      restart_policy:
+        condition: none
+      placement:
+        constraints:
+          - node.role == manager
+
+  cloud-secrets:
+    image: golang:1.26.1-alpine
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./../:/app
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    working_dir: /app
+    command: go run ./cmd/cloud-secrets/main.go
+    environment:
+      - CS_PROVIDER=vault
+      - CS_REFRESH_INTERVAL=10s
+      - CS_LOG_LEVEL=debug
+      - VAULT_ADDRESS=http://vault:8200
+      - VAULT_TOKEN=/var/run/secrets/vault_token
+      - VAULT_MOUNT_PATH=secret
+      - VAULT_PREFIX=cloud-secrets
+    secrets:
+      - vault_token
+    deploy:
+      labels:
+        - prometheus.port=8000
+      placement:
+        constraints:
+          - node.role == manager
+
+secrets:
+  vault_token:
+    external: true
+  cloud-secrets-users-service-db-dsn-value:
+    external: true
