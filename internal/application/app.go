@@ -50,12 +50,12 @@ func NewApplication(ctx context.Context, cfg config.Config, metricsGroup *metric
 
 	slog.Info("[app] creating secret provider")
 
-	provider, err := cloudru.NewProvider(ctx, cfg.CloudRu, metricsGroup.Provider)
+	provider, err := cloudru.NewProvider(ctx, cfg.CloudRu)
 	if err != nil {
 		return nil, err
 	}
 
-	app.secretProvider = provider
+	app.secretProvider = contracts.WithMetrics(provider, metricsGroup.Provider)
 
 	app.synchronizer = secrets.NewSynchronizer(
 		engine.NewClient(dockerClient, metricsGroup.Docker),

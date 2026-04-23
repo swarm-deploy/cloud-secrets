@@ -10,10 +10,10 @@ import (
 	"time"
 
 	iamAuthV1 "github.com/cloudru-tech/iam-sdk/api/auth/v1"
+	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
 	"google.golang.org/grpc/credentials"
 
 	smssdk "github.com/cloudru-tech/secret-manager-sdk"
-	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 )
@@ -22,13 +22,11 @@ type Provider struct {
 	cfg Config
 
 	secretManager *smssdk.Client
-	metrics       metrics.Provider
 }
 
-func NewProvider(ctx context.Context, cfg Config, providerMetrics metrics.Provider) (*Provider, error) {
+func NewProvider(ctx context.Context, cfg Config) (*Provider, error) {
 	p := &Provider{
-		cfg:     cfg,
-		metrics: providerMetrics,
+		cfg: cfg,
 	}
 
 	slog.Info("[cloudru] resolving endpoints")
@@ -44,6 +42,12 @@ func NewProvider(ctx context.Context, cfg Config, providerMetrics metrics.Provid
 	}
 
 	return p, nil
+}
+
+func (p *Provider) Definition() contracts.ProviderDefinition {
+	return contracts.ProviderDefinition{
+		Name: "Cloud.ru Secret Manager",
+	}
 }
 
 func (p *Provider) resolveEndpoints(ctx context.Context) error {
