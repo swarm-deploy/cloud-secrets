@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"strings"
 
+	"github.com/artarts36/gopipe"
 	"github.com/moby/moby/api/types/swarm"
 	"github.com/swarm-deploy/cloud-secrets/internal/engine"
 	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
@@ -40,120 +41,254 @@ type Result struct {
 	Skipped int
 }
 
-func (s *Synchronizer) Sync(ctx context.Context) (Result, error) { //nolint:gocognit,funlen,lll // optimal solution not found
+const (
+	stepLoadSwarmState    = "load_swarm_state"
+	stepLoadExternalState = "load_external_state"
+	stepProcessSecrets    = "process_secrets"
+	stepApplyServices     = "apply_service_updates"
+	stepRestoreSecrets    = "restore_parent_secrets"
+)
+
+type syncPayload struct {
+	result Result
+
+	servicesMap     map[string][]swarm.Service
+	swarmSecretsMap map[string]*engine.ExistingSecret
+	externalSecrets map[string]contracts.Secret
+
+	pendingServices *TaskQueue
+}
+
+func (s *Synchronizer) Sync(ctx context.Context) (Result, error) {
+	payload := &syncPayload{
+		pendingServices: newServiceQueue(),
+	}
+
+	err := s.newPipeline().Run(ctx, payload)
+	if err == nil {
+		return payload.result, nil
+	}
+
+	if stepErr, ok := err.(*gopipe.StepError); ok && stepErr.StepName == stepRestoreSecrets {
+		return Result{}, err
+	}
+
+	return payload.result, err
+}
+
+func (s *Synchronizer) newPipeline() *gopipe.Pipeline[*syncPayload] {
+	pipeline := gopipe.NewPipelineWithConfig[*syncPayload](gopipe.Config{
+		PipelineName: "secrets_synchronizer",
+		Logger:       slog.Default(),
+	})
+
+	pipeline.Add(gopipe.Step[*syncPayload]{
+		Name: stepLoadSwarmState,
+		Run:  s.loadSwarmState,
+	})
+	pipeline.Add(gopipe.Step[*syncPayload]{
+		Name: stepLoadExternalState,
+		Run:  s.loadExternalState,
+	})
+	pipeline.Add(gopipe.Step[*syncPayload]{
+		Name: stepProcessSecrets,
+		Run:  s.processExternalSecrets,
+	})
+	pipeline.Add(gopipe.Step[*syncPayload]{
+		Name: stepApplyServices,
+		When: gopipe.When(func(payload *syncPayload) bool {
+			return payload.hasPendingServiceUpdates()
+		}),
+		Run: s.applyServiceUpdates,
+	})
+	pipeline.Add(gopipe.Step[*syncPayload]{
+		Name: stepRestoreSecrets,
+		When: gopipe.When(func(payload *syncPayload) bool {
+			return payload.hasPendingSecretRestores()
+		}),
+		Run: s.restorePendingSecrets,
+	})
+
+	return pipeline
+}
+
+func (s *Synchronizer) loadSwarmState(ctx context.Context, payload *syncPayload) error {
 	servicesMap, err := s.engine.MapServicesBySecrets(ctx)
 	if err != nil {
-		return Result{}, fmt.Errorf("map services by secrets: %w", err)
+		return fmt.Errorf("map services by secrets: %w", err)
 	}
 
 	swarmSecretsMap, err := s.engine.MapSecrets(ctx)
 	if err != nil {
-		return Result{}, fmt.Errorf("list engine secrets: %w", err)
+		return fmt.Errorf("list engine secrets: %w", err)
 	}
 
-	slog.DebugContext(ctx, "[synchronizer] fetched secrets from engine", slog.Any("secrets", swarmSecretsMap))
+	payload.servicesMap = servicesMap
+	payload.swarmSecretsMap = swarmSecretsMap
 
-	result := Result{}
+	slog.DebugContext(ctx, "[synchronizer] fetched secrets from engine", slog.Any("secrets", payload.swarmSecretsMap))
 
+	return nil
+}
+
+func (s *Synchronizer) loadExternalState(ctx context.Context, payload *syncPayload) error {
 	externalSecrets, err := s.secretProvider.ListSecrets(ctx)
 	if err != nil {
-		return Result{}, fmt.Errorf("list secrets in external storage: %w", err)
+		return fmt.Errorf("list secrets in external storage: %w", err)
 	}
 
-	pendingServices := newServiceQueue()
+	payload.externalSecrets = externalSecrets
 
-	for _, externalSecret := range externalSecrets {
-		fixedSecretPath := s.prepareSecretPath(externalSecret.Path)
+	return nil
+}
 
-		swarmSecret, alreadyExists := swarmSecretsMap[fixedSecretPath]
-		if !alreadyExists {
-			payload, perr := s.secretProvider.GetSecretPayload(ctx, externalSecret.Path)
-			if perr != nil {
-				return result, fmt.Errorf("get payload of secret %q: %w", externalSecret.Path, perr)
-			}
-
-			err = s.engine.CreateSecret(ctx, engine.CreatingSecret{
-				Path:              fixedSecretPath,
-				Value:             payload,
-				ExternalPath:      externalSecret.Path,
-				ExternalVersionID: externalSecret.VersionID,
-			})
-			if err != nil {
-				return result, fmt.Errorf("create secret %q: %w", fixedSecretPath, err)
-			}
-
-			result.Created++
-			s.metrics.IncCreated()
-
-			continue
+func (s *Synchronizer) processExternalSecrets(ctx context.Context, payload *syncPayload) error {
+	for _, externalSecret := range payload.externalSecrets {
+		err := s.processExternalSecret(ctx, payload, externalSecret)
+		if err != nil {
+			return err
 		}
+	}
 
-		if swarmSecret.LatestVersion().ExternalID == externalSecret.VersionID {
-			services, ok := servicesMap[swarmSecret.Path]
-			if ok {
-				for _, service := range services {
-					for _, ref := range service.Spec.TaskTemplate.ContainerSpec.Secrets {
-						if ref.File.Name == externalSecret.Path && ref.SecretID != swarmSecret.ID {
-							pendingServices.PushService(service, UpdatingServiceSecret{
-								Name: externalSecret.Path,
-								ID:   swarmSecret.LatestVersion().ExternalID,
-								Path: swarmSecret.Path,
-							})
-						}
-					}
-				}
-			}
+	if !payload.hasPendingChanges() {
+		slog.DebugContext(ctx, "[synchronizer] no updated secrets")
+	}
 
-			result.Skipped++
-			continue
-		}
+	return nil
+}
 
-		payload, perr := s.secretProvider.GetSecretPayload(ctx, externalSecret.Path)
-		if perr != nil {
-			return result, fmt.Errorf("get payload of secret %q: %w", externalSecret.Path, perr)
-		}
+func (s *Synchronizer) processExternalSecret(
+	ctx context.Context,
+	payload *syncPayload,
+	externalSecret contracts.Secret,
+) error {
+	fixedSecretPath := s.prepareSecretPath(externalSecret.Path)
 
-		secretPayload := engine.CreatingSecretVersion{
-			Path:       secretname.Generate(externalSecret.Path, s.folderDelimiter, externalSecret.VersionID),
-			ExternalID: externalSecret.VersionID,
-			Value:      payload,
-		}
+	swarmSecret, alreadyExists := payload.swarmSecretsMap[fixedSecretPath]
+	if !alreadyExists {
+		return s.createMissingSecret(ctx, &payload.result, externalSecret, fixedSecretPath)
+	}
 
-		vers, verr := s.engine.CreateSecretVersion(ctx, *swarmSecret, secretPayload)
-		if verr != nil {
-			return result, fmt.Errorf("create secret version: %w", verr)
-		}
+	if swarmSecret.LatestVersion().ExternalID == externalSecret.VersionID {
+		s.enqueueSameVersionServices(payload.pendingServices, payload.servicesMap[swarmSecret.Path], externalSecret, swarmSecret)
+		payload.result.Skipped++
 
-		services, ok := servicesMap[swarmSecret.Path]
-		if ok {
-			for _, service := range services {
-				pendingServices.PushService(service, UpdatingServiceSecret{
-					Name: vers.Name,
-					ID:   vers.ID,
+		return nil
+	}
+
+	return s.createUpdatedSecretVersion(ctx, payload, externalSecret, swarmSecret)
+}
+
+func (s *Synchronizer) createMissingSecret(
+	ctx context.Context,
+	result *Result,
+	externalSecret contracts.Secret,
+	fixedSecretPath string,
+) error {
+	payload, err := s.secretProvider.GetSecretPayload(ctx, externalSecret.Path)
+	if err != nil {
+		return fmt.Errorf("get payload of secret %q: %w", externalSecret.Path, err)
+	}
+
+	err = s.engine.CreateSecret(ctx, engine.CreatingSecret{
+		Path:              fixedSecretPath,
+		Value:             payload,
+		ExternalPath:      externalSecret.Path,
+		ExternalVersionID: externalSecret.VersionID,
+	})
+	if err != nil {
+		return fmt.Errorf("create secret %q: %w", fixedSecretPath, err)
+	}
+
+	result.Created++
+	s.metrics.IncCreated()
+
+	return nil
+}
+
+func (s *Synchronizer) createUpdatedSecretVersion(
+	ctx context.Context,
+	payload *syncPayload,
+	externalSecret contracts.Secret,
+	swarmSecret *engine.ExistingSecret,
+) error {
+	secretPayload, err := s.getUpdatedSecretPayload(ctx, externalSecret)
+	if err != nil {
+		return err
+	}
+
+	createdVersion, err := s.engine.CreateSecretVersion(ctx, *swarmSecret, secretPayload)
+	if err != nil {
+		return fmt.Errorf("create secret version: %w", err)
+	}
+
+	s.enqueueUpdatedServices(payload.pendingServices, payload.servicesMap[swarmSecret.Path], swarmSecret.Path, createdVersion)
+	payload.pendingServices.PushSecret(UpdatedSecret{
+		Name:       createdVersion.Name,
+		ID:         createdVersion.ID,
+		Path:       swarmSecret.Path,
+		Value:      secretPayload.Value,
+		ExternalID: externalSecret.VersionID,
+	})
+
+	payload.result.Updated++
+	s.metrics.IncUpdated()
+
+	return nil
+}
+
+func (s *Synchronizer) getUpdatedSecretPayload(
+	ctx context.Context,
+	externalSecret contracts.Secret,
+) (engine.CreatingSecretVersion, error) {
+	payload, err := s.secretProvider.GetSecretPayload(ctx, externalSecret.Path)
+	if err != nil {
+		return engine.CreatingSecretVersion{}, fmt.Errorf("get payload of secret %q: %w", externalSecret.Path, err)
+	}
+
+	return engine.CreatingSecretVersion{
+		Path:       secretname.Generate(externalSecret.Path, s.folderDelimiter, externalSecret.VersionID),
+		ExternalID: externalSecret.VersionID,
+		Value:      payload,
+	}, nil
+}
+
+func (s *Synchronizer) enqueueSameVersionServices(
+	queue *TaskQueue,
+	services []swarm.Service,
+	externalSecret contracts.Secret,
+	swarmSecret *engine.ExistingSecret,
+) {
+	for _, service := range services {
+		for _, ref := range service.Spec.TaskTemplate.ContainerSpec.Secrets {
+			if ref.File.Name == externalSecret.Path && ref.SecretID != swarmSecret.ID {
+				queue.PushService(service, UpdatingServiceSecret{
+					Name: externalSecret.Path,
+					ID:   swarmSecret.LatestVersion().ExternalID,
 					Path: swarmSecret.Path,
 				})
 			}
 		}
+	}
+}
 
-		pendingServices.PushSecret(UpdatedSecret{
-			Name:       vers.Name,
-			ID:         vers.ID,
-			Path:       swarmSecret.Path,
-			Value:      secretPayload.Value,
-			ExternalID: externalSecret.VersionID,
+func (s *Synchronizer) enqueueUpdatedServices(
+	queue *TaskQueue,
+	services []swarm.Service,
+	path string,
+	secret engine.CreatedSecretVersion,
+) {
+	for _, service := range services {
+		queue.PushService(service, UpdatingServiceSecret{
+			Name: secret.Name,
+			ID:   secret.ID,
+			Path: path,
 		})
-
-		result.Updated++
-		s.metrics.IncUpdated()
 	}
+}
 
-	if len(pendingServices.services) == 0 && len(pendingServices.secrets) == 0 {
-		slog.DebugContext(ctx, "[synchronizer] no updated secrets")
-		return result, nil
-	}
-
-	// removing old secret in services.
-	for _, service := range pendingServices.services {
+func (s *Synchronizer) applyServiceUpdates(ctx context.Context, payload *syncPayload) error {
+	for _, service := range payload.pendingServices.services {
 		secrets := []*swarm.SecretReference{}
 		for _, secRef := range service.Service.Spec.TaskTemplate.ContainerSpec.Secrets {
 			if _, ok := service.Secrets[secRef.File.Name]; !ok {
@@ -172,18 +307,17 @@ func (s *Synchronizer) Sync(ctx context.Context) (Result, error) { //nolint:goco
 			slog.Any("new_secrets", secrets),
 		)
 
-		err = s.engine.UpdateService(ctx, service.Service)
+		err := s.engine.UpdateService(ctx, service.Service)
 		if err != nil {
-			return result, fmt.Errorf("update service %q: %w", service.Service.Spec.Name, err)
+			return fmt.Errorf("update service %q: %w", service.Service.Spec.Name, err)
 		}
 	}
 
-	err = s.restoreSecrets(ctx, pendingServices, swarmSecretsMap)
-	if err != nil {
-		return Result{}, fmt.Errorf("restore secrets: %w", err)
-	}
+	return nil
+}
 
-	return result, nil
+func (s *Synchronizer) restorePendingSecrets(ctx context.Context, payload *syncPayload) error {
+	return s.restoreSecrets(ctx, payload.pendingServices, payload.swarmSecretsMap)
 }
 
 func (s *Synchronizer) restoreSecrets(
@@ -229,4 +363,16 @@ func (s *Synchronizer) restoreSecrets(
 
 func (s *Synchronizer) prepareSecretPath(path string) string {
 	return strings.ReplaceAll(path, "/", string(s.folderDelimiter))
+}
+
+func (p *syncPayload) hasPendingChanges() bool {
+	return p.hasPendingServiceUpdates() || p.hasPendingSecretRestores()
+}
+
+func (p *syncPayload) hasPendingServiceUpdates() bool {
+	return len(p.pendingServices.services) > 0
+}
+
+func (p *syncPayload) hasPendingSecretRestores() bool {
+	return len(p.pendingServices.secrets) > 0
 }
