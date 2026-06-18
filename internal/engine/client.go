@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/moby/moby/api/types/swarm"
 	dock "github.com/moby/moby/client"
 	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
@@ -33,6 +32,8 @@ type CreatingSecret struct {
 }
 
 type CreatingSecretVersion struct {
+	Path string
+
 	ExternalID string
 
 	Value []byte
@@ -86,12 +87,10 @@ func (c *Client) CreateSecretVersion(
 		c.metrics.RecordRequest("create_secret_version", time.Since(startedAt))
 	}()
 
-	name := uuid.NewString()
-
 	resp, err := c.client.SecretCreate(ctx, dock.SecretCreateOptions{
 		Spec: swarm.SecretSpec{
 			Annotations: swarm.Annotations{
-				Name: name,
+				Name: version.Path,
 				Labels: map[string]string{
 					"logical_path":        secret.Path,
 					"external_path":       secret.ExternalPath,
@@ -107,7 +106,7 @@ func (c *Client) CreateSecretVersion(
 
 	return CreatedSecretVersion{
 		ID:   resp.ID,
-		Name: name,
+		Name: version.Path,
 	}, err
 }
 

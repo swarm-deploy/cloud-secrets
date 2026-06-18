@@ -114,6 +114,7 @@ func (s *Synchronizer) Sync(ctx context.Context) (Result, error) { //nolint:goco
 		}
 
 		secretPayload := engine.CreatingSecretVersion{
+			Path:       secretname.Generate(externalSecret.Path, s.folderDelimiter, externalSecret.VersionID),
 			ExternalID: externalSecret.VersionID,
 			Value:      payload,
 		}
