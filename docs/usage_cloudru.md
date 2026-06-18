@@ -15,6 +15,7 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     environment:
       - CS_REFRESH_INTERVAL=10s
+      - CS_SECRET_NAME_FOLDER_DELIMITER="-"
       - CLOUDRU_PROJECT_ID=<uuid>
       - CLOUDRU_IAM_CLIENT_ID=/var/run/secrets/iam_id
       - CLOUDRU_IAM_CLIENT_SECRET=/var/run/secrets/iam_secret

@@ -61,6 +61,7 @@ func NewApplication(ctx context.Context, cfg config.Config, metricsGroup *metric
 		engine.NewClient(dockerClient, metricsGroup.Docker),
 		provider,
 		metricsGroup.Secrets,
+		cfg.CloudSecrets.SecretNameFolderDelimiter,
 	)
 
 	return app, nil
@@ -69,9 +70,9 @@ func NewApplication(ctx context.Context, cfg config.Config, metricsGroup *metric
 const sighupBuf = 3
 
 func (app *Application) Run(ctx context.Context) error {
-	slog.InfoContext(ctx, "setup ticker", slog.String("interval", app.cfg.SwarmSecrets.RefreshInterval.String()))
+	slog.InfoContext(ctx, "setup ticker", slog.String("interval", app.cfg.CloudSecrets.RefreshInterval.String()))
 
-	app.ticker = time.NewTicker(app.cfg.SwarmSecrets.RefreshInterval)
+	app.ticker = time.NewTicker(app.cfg.CloudSecrets.RefreshInterval)
 
 	sighupChannel := make(chan os.Signal, sighupBuf)
 

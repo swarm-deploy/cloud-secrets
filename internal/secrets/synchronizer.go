@@ -10,23 +10,27 @@ import (
 	"github.com/swarm-deploy/cloud-secrets/internal/engine"
 	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
+	"github.com/swarm-deploy/cloud-secrets/internal/secretname"
 )
 
 type Synchronizer struct {
-	engine         *engine.Client
-	secretProvider contracts.Provider
-	metrics        metrics.Secrets
+	engine          *engine.Client
+	secretProvider  contracts.Provider
+	metrics         metrics.Secrets
+	folderDelimiter secretname.FolderDelimiter
 }
 
 func NewSynchronizer(
 	engine *engine.Client,
 	secretProvider contracts.Provider,
 	secretsMetrics metrics.Secrets,
+	folderDelimiter secretname.FolderDelimiter,
 ) *Synchronizer {
 	return &Synchronizer{
-		engine:         engine,
-		secretProvider: secretProvider,
-		metrics:        secretsMetrics,
+		engine:          engine,
+		secretProvider:  secretProvider,
+		metrics:         secretsMetrics,
+		folderDelimiter: folderDelimiter,
 	}
 }
 
@@ -59,7 +63,7 @@ func (s *Synchronizer) Sync(ctx context.Context) (Result, error) { //nolint:goco
 	pendingServices := newServiceQueue()
 
 	for _, externalSecret := range externalSecrets {
-		fixedSecretPath := prepareSecretPath(externalSecret.Path)
+		fixedSecretPath := s.prepareSecretPath(externalSecret.Path)
 
 		swarmSecret, alreadyExists := swarmSecretsMap[fixedSecretPath]
 		if !alreadyExists {
@@ -222,6 +226,6 @@ func (s *Synchronizer) restoreSecrets(
 	return nil
 }
 
-func prepareSecretPath(path string) string {
-	return strings.ReplaceAll(path, "/", "-")
+func (s *Synchronizer) prepareSecretPath(path string) string {
+	return strings.ReplaceAll(path, "/", string(s.folderDelimiter))
 }

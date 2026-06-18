@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/artarts36/go-entrypoint"
-	"github.com/caarlos0/env/v11"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/swarm-deploy/cloud-secrets/internal/application"
@@ -30,15 +29,14 @@ func main() {
 
 	slog.Info("[main] parse config")
 
-	// parse with generics
-	cfg, err := env.ParseAs[config.Config]()
+	cfg, err := config.Load()
 	if err != nil {
 		slog.Error("[main] failed to parse config", slog.Any("err", err))
 		os.Exit(1)
 	}
 
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
-		Level: cfg.SwarmSecrets.Log.Level,
+		Level: cfg.CloudSecrets.Log.Level,
 	})))
 
 	slog.Info("[main] creating application")
@@ -55,7 +53,7 @@ func main() {
 
 	metricsGroup.BuildInfo.Set(Version, BuildDate)
 
-	app, err := application.NewApplication(initCtx, cfg, metricsGroup)
+	app, err := application.NewApplication(initCtx, *cfg, metricsGroup)
 	if err != nil {
 		slog.Error("[main] failed to create application", slog.Any("err", err))
 		os.Exit(1)
