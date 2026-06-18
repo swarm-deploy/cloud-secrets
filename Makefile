@@ -1,5 +1,6 @@
 .PHONY: test
 test:
+	go test ./..
 	docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false
 
 .PHONY: lint

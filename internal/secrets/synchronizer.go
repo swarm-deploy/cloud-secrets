@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/artarts36/gopipe"
 	"github.com/moby/moby/api/types/swarm"
@@ -92,21 +93,29 @@ func (s *Synchronizer) attachPipeline() {
 		Name: stepLoadSwarmState,
 		Run:  s.loadSwarmState,
 	})
+
 	s.pipeline.Add(gopipe.Step[*syncPayload]{
-		Name: stepLoadExternalState,
-		Run:  s.loadExternalState,
+		Name:       stepLoadExternalState,
+		Retries:    3,                      //nolint:mnd // it's look as const
+		RetryDelay: 150 * time.Millisecond, //nolint:mnd // it's look as const
+		Run:        s.loadExternalState,
 	})
+
 	s.pipeline.Add(gopipe.Step[*syncPayload]{
 		Name: stepProcessSecrets,
 		Run:  s.processExternalSecrets,
 	})
+
 	s.pipeline.Add(gopipe.Step[*syncPayload]{
-		Name: stepApplyServices,
+		Name:       stepApplyServices,
+		Retries:    3,                     //nolint:mnd // it's look as const
+		RetryDelay: 50 * time.Millisecond, //nolint:mnd // it's look as const
 		When: gopipe.When(func(payload *syncPayload) bool {
 			return payload.hasPendingServiceUpdates()
 		}),
 		Run: s.applyServiceUpdates,
 	})
+
 	s.pipeline.Add(gopipe.Step[*syncPayload]{
 		Name: stepRestoreSecrets,
 		When: gopipe.When(func(payload *syncPayload) bool {
