@@ -58,7 +58,7 @@ func NewApplication(ctx context.Context, cfg config.Config, metricsGroup *metric
 	app.secretProvider = contracts.WithMetrics(provider, metricsGroup.Provider)
 
 	app.synchronizer = secrets.NewSynchronizer(
-		engine.NewClient(dockerClient, metricsGroup.Docker),
+		engine.NewDockerClient(dockerClient, metricsGroup.Docker),
 		provider,
 		metricsGroup.Secrets,
 		cfg.CloudSecrets.SecretNameFolderDelimiter,

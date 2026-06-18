@@ -11,6 +11,7 @@ require (
 	github.com/moby/moby/api v1.53.0
 	github.com/moby/moby/client v0.2.2
 	github.com/prometheus/client_golang v1.23.2
+	go.uber.org/mock v0.6.0
 	google.golang.org/grpc v1.70.0
 )
 

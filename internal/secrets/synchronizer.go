@@ -14,14 +14,14 @@ import (
 )
 
 type Synchronizer struct {
-	engine          *engine.Client
+	engine          engine.Client
 	secretProvider  contracts.Provider
 	metrics         metrics.Secrets
 	folderDelimiter secretname.FolderDelimiter
 }
 
 func NewSynchronizer(
-	engine *engine.Client,
+	engine engine.Client,
 	secretProvider contracts.Provider,
 	secretsMetrics metrics.Secrets,
 	folderDelimiter secretname.FolderDelimiter,

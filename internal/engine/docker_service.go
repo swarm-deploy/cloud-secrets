@@ -11,7 +11,7 @@ import (
 )
 
 // MapServicesBySecrets maps services by using secrets. key = secret.file.name.
-func (c *Client) MapServicesBySecrets(ctx context.Context) (map[string][]swarm.Service, error) {
+func (c *DockerClient) MapServicesBySecrets(ctx context.Context) (map[string][]swarm.Service, error) {
 	startedAt := time.Now()
 
 	resp, err := c.client.ServiceList(ctx, dock.ServiceListOptions{})
@@ -35,7 +35,7 @@ func (c *Client) MapServicesBySecrets(ctx context.Context) (map[string][]swarm.S
 	return serviceSecretMap, nil
 }
 
-func (c *Client) UpdateService(ctx context.Context, service swarm.Service) error {
+func (c *DockerClient) UpdateService(ctx context.Context, service swarm.Service) error {
 	startedAt := time.Now()
 
 	warnings, err := c.client.ServiceUpdate(ctx, service.ID, dock.ServiceUpdateOptions{
