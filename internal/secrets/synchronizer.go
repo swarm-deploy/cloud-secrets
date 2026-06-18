@@ -19,6 +19,8 @@ type Synchronizer struct {
 	secretProvider  contracts.Provider
 	metrics         metrics.Secrets
 	folderDelimiter secretname.FolderDelimiter
+
+	pipeline *gopipe.Pipeline[*syncPayload]
 }
 
 func NewSynchronizer(
@@ -27,12 +29,16 @@ func NewSynchronizer(
 	secretsMetrics metrics.Secrets,
 	folderDelimiter secretname.FolderDelimiter,
 ) *Synchronizer {
-	return &Synchronizer{
+	s := &Synchronizer{
 		engine:          engine,
 		secretProvider:  secretProvider,
 		metrics:         secretsMetrics,
 		folderDelimiter: folderDelimiter,
 	}
+
+	s.attachPipeline()
+
+	return s
 }
 
 type Result struct {
@@ -64,7 +70,7 @@ func (s *Synchronizer) Sync(ctx context.Context) (Result, error) {
 		pendingServices: newServiceQueue(),
 	}
 
-	err := s.newPipeline().Run(ctx, payload)
+	err := s.pipeline.Run(ctx, payload)
 	if err == nil {
 		return payload.result, nil
 	}
@@ -76,40 +82,38 @@ func (s *Synchronizer) Sync(ctx context.Context) (Result, error) {
 	return payload.result, err
 }
 
-func (s *Synchronizer) newPipeline() *gopipe.Pipeline[*syncPayload] {
-	pipeline := gopipe.NewPipelineWithConfig[*syncPayload](gopipe.Config{
-		PipelineName: "secrets_synchronizer",
+func (s *Synchronizer) attachPipeline() {
+	s.pipeline = gopipe.NewPipelineWithConfig[*syncPayload](gopipe.Config{
+		PipelineName: "sync_secrets",
 		Logger:       slog.Default(),
 	})
 
-	pipeline.Add(gopipe.Step[*syncPayload]{
+	s.pipeline.Add(gopipe.Step[*syncPayload]{
 		Name: stepLoadSwarmState,
 		Run:  s.loadSwarmState,
 	})
-	pipeline.Add(gopipe.Step[*syncPayload]{
+	s.pipeline.Add(gopipe.Step[*syncPayload]{
 		Name: stepLoadExternalState,
 		Run:  s.loadExternalState,
 	})
-	pipeline.Add(gopipe.Step[*syncPayload]{
+	s.pipeline.Add(gopipe.Step[*syncPayload]{
 		Name: stepProcessSecrets,
 		Run:  s.processExternalSecrets,
 	})
-	pipeline.Add(gopipe.Step[*syncPayload]{
+	s.pipeline.Add(gopipe.Step[*syncPayload]{
 		Name: stepApplyServices,
 		When: gopipe.When(func(payload *syncPayload) bool {
 			return payload.hasPendingServiceUpdates()
 		}),
 		Run: s.applyServiceUpdates,
 	})
-	pipeline.Add(gopipe.Step[*syncPayload]{
+	s.pipeline.Add(gopipe.Step[*syncPayload]{
 		Name: stepRestoreSecrets,
 		When: gopipe.When(func(payload *syncPayload) bool {
 			return payload.hasPendingSecretRestores()
 		}),
 		Run: s.restorePendingSecrets,
 	})
-
-	return pipeline
 }
 
 func (s *Synchronizer) loadSwarmState(ctx context.Context, payload *syncPayload) error {
