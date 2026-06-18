@@ -170,7 +170,12 @@ func (s *Synchronizer) processExternalSecret(
 	}
 
 	if swarmSecret.LatestVersion().ExternalID == externalSecret.VersionID {
-		s.enqueueSameVersionServices(payload.pendingServices, payload.servicesMap[swarmSecret.Path], externalSecret, swarmSecret)
+		s.enqueueSameVersionServices(
+			payload.pendingServices,
+			payload.servicesMap[swarmSecret.Path],
+			externalSecret,
+			swarmSecret,
+		)
 		payload.result.Skipped++
 
 		return nil
@@ -222,7 +227,12 @@ func (s *Synchronizer) createUpdatedSecretVersion(
 		return fmt.Errorf("create secret version: %w", err)
 	}
 
-	s.enqueueUpdatedServices(payload.pendingServices, payload.servicesMap[swarmSecret.Path], swarmSecret.Path, createdVersion)
+	s.enqueueUpdatedServices(
+		payload.pendingServices,
+		payload.servicesMap[swarmSecret.Path],
+		swarmSecret.Path,
+		createdVersion,
+	)
 	payload.pendingServices.PushSecret(UpdatedSecret{
 		Name:       createdVersion.Name,
 		ID:         createdVersion.ID,
