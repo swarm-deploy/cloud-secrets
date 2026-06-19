@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"github.com/artarts36/go-entrypoint"
+	gopipeprom "github.com/artarts36/gopipe/pkg/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/swarm-deploy/cloud-secrets/internal/application"
 	"github.com/swarm-deploy/cloud-secrets/internal/config"
 	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
@@ -48,6 +50,11 @@ func main() {
 	})
 	if err = prometheus.Register(metricsGroup); err != nil {
 		slog.Error("[main] failed to register metrics", slog.Any("err", err))
+		os.Exit(1)
+	}
+
+	if err = gopipeprom.Register(); err != nil {
+		slog.Error("[main] failed to register gopipe metrics", slog.Any("err", err))
 		os.Exit(1)
 	}
 

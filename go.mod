@@ -1,10 +1,11 @@
 module github.com/swarm-deploy/cloud-secrets
 
-go 1.26.1
+go 1.26.2
 
 require (
 	github.com/artarts36/go-entrypoint v0.2.1
-	github.com/artarts36/gopipe v0.1.2
+	github.com/artarts36/gopipe v0.1.3
+	github.com/artarts36/gopipe/pkg/prometheus v0.1.0
 	github.com/caarlos0/env/v11 v11.3.1
 	github.com/cloudru-tech/iam-sdk v1.0.4
 	github.com/cloudru-tech/secret-manager-sdk v1.1.1
