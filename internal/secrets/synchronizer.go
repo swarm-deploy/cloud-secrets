@@ -378,7 +378,7 @@ func (s *Synchronizer) applyServiceUpdates(ctx context.Context, payload *syncPay
 		}
 
 		for _, secret := range service.Secrets {
-			secrets = append(secrets, NewSecretRef(secret.Path, secret.Name, secret.ID))
+			secrets = append(secrets, engine.NewSecretRef(secret.Path, secret.Name, secret.ID))
 		}
 
 		service.Service.Spec.TaskTemplate.ContainerSpec.Secrets = secrets

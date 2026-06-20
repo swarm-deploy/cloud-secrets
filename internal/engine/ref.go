@@ -1,4 +1,4 @@
-package secrets
+package engine
 
 import "github.com/moby/moby/api/types/swarm"
 

@@ -65,7 +65,7 @@ func TestSynchronizer_Sync(t *testing.T) {
 						newService(
 							"service-id",
 							"api",
-							NewSecretRef("prod-db-password", "prod-db-password", "parent-secret-id"),
+							engine.NewSecretRef("prod-db-password", "prod-db-password", "parent-secret-id"),
 						),
 					},
 				}, nil)
@@ -94,7 +94,7 @@ func TestSynchronizer_Sync(t *testing.T) {
 				engineClient.EXPECT().UpdateService(gomock.Any(), newService(
 					"service-id",
 					"api",
-					NewSecretRef("prod-db-password", "prod-db-password-version-2", "new-version-secret-id"),
+					engine.NewSecretRef("prod-db-password", "prod-db-password-version-2", "new-version-secret-id"),
 				)).Return(nil)
 				engineClient.EXPECT().RemoveSecret(gomock.Any(), "parent-secret-id").Return(nil)
 				engineClient.EXPECT().RemoveSecret(gomock.Any(), "old-version-secret-id").Return(nil)
