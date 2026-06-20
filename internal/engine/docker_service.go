@@ -10,8 +10,8 @@ import (
 	dock "github.com/moby/moby/client"
 )
 
-// MapServicesBySecrets maps services by using secrets. key = secret.file.name.
-func (c *DockerClient) MapServicesBySecrets(ctx context.Context) (map[string][]swarm.Service, error) {
+// ListServices loads all services from Swarm.
+func (c *DockerClient) ListServices(ctx context.Context) ([]swarm.Service, error) {
 	startedAt := time.Now()
 
 	resp, err := c.client.ServiceList(ctx, dock.ServiceListOptions{})
@@ -20,19 +20,7 @@ func (c *DockerClient) MapServicesBySecrets(ctx context.Context) (map[string][]s
 	}
 	c.metrics.RecordRequest("list_services", time.Since(startedAt))
 
-	serviceSecretMap := map[string][]swarm.Service{}
-
-	for _, item := range resp.Items {
-		for _, secret := range item.Spec.TaskTemplate.ContainerSpec.Secrets {
-			if _, ok := serviceSecretMap[secret.File.Name]; !ok {
-				serviceSecretMap[secret.File.Name] = []swarm.Service{}
-			}
-
-			serviceSecretMap[secret.File.Name] = append(serviceSecretMap[secret.File.Name], item)
-		}
-	}
-
-	return serviceSecretMap, nil
+	return resp.Items, nil
 }
 
 func (c *DockerClient) UpdateService(ctx context.Context, service swarm.Service) error {

@@ -49,7 +49,7 @@ type Result struct {
 type syncPayload struct {
 	result Result
 
-	servicesMap     map[string][]swarm.Service
+	services        []swarm.Service
 	swarmSecretsMap map[string]*engine.ExistingSecret
 	externalSecrets map[string]contracts.Secret
 

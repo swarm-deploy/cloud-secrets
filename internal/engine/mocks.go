@@ -85,19 +85,19 @@ func (mr *MockClientMockRecorder) MapSecrets(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MapSecrets", reflect.TypeOf((*MockClient)(nil).MapSecrets), ctx)
 }
 
-// MapServicesBySecrets mocks base method.
-func (m *MockClient) MapServicesBySecrets(ctx context.Context) (map[string][]swarm.Service, error) {
+// ListServices mocks base method.
+func (m *MockClient) ListServices(ctx context.Context) ([]swarm.Service, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "MapServicesBySecrets", ctx)
-	ret0, _ := ret[0].(map[string][]swarm.Service)
+	ret := m.ctrl.Call(m, "ListServices", ctx)
+	ret0, _ := ret[0].([]swarm.Service)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// MapServicesBySecrets indicates an expected call of MapServicesBySecrets.
-func (mr *MockClientMockRecorder) MapServicesBySecrets(ctx any) *gomock.Call {
+// ListServices indicates an expected call of ListServices.
+func (mr *MockClientMockRecorder) ListServices(ctx any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "MapServicesBySecrets", reflect.TypeOf((*MockClient)(nil).MapServicesBySecrets), ctx)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListServices", reflect.TypeOf((*MockClient)(nil).ListServices), ctx)
 }
 
 // RemoveSecret mocks base method.

@@ -9,17 +9,23 @@ import (
 )
 
 type Client interface {
+	// CreateSecretVersion creates a new version of an existing logical secret.
 	CreateSecretVersion(
 		ctx context.Context,
 		secret ExistingSecret,
 		version CreatingSecretVersion,
 	) (CreatedSecretVersion, error)
+	// UpdateService updates a Swarm service specification.
 	UpdateService(ctx context.Context, service swarm.Service) error
 
+	// RemoveSecret removes a Swarm secret by ID.
 	RemoveSecret(ctx context.Context, id string) error
+	// CreateSecret creates a logical Swarm secret.
 	CreateSecret(ctx context.Context, spec CreatingSecret) error
+	// MapSecrets loads logical secrets and all their versions keyed by logical path.
 	MapSecrets(ctx context.Context) (map[string]*ExistingSecret, error)
-	MapServicesBySecrets(ctx context.Context) (map[string][]swarm.Service, error)
+	// ListServices loads all Swarm services.
+	ListServices(ctx context.Context) ([]swarm.Service, error)
 }
 
 type CreatingSecret struct {

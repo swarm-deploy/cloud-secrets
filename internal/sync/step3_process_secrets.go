@@ -45,7 +45,7 @@ func (s *Synchronizer) processExternalSecret(
 		s.enqueueSameVersionServices(
 			payload.pendingServiceUpdates,
 			&payload.pendingServiceUpdateOrder,
-			payload.servicesMap[swarmSecret.Path],
+			payload.services,
 			externalSecret,
 			swarmSecret,
 		)
@@ -103,7 +103,7 @@ func (s *Synchronizer) createUpdatedSecretVersion(
 	s.enqueueUpdatedServices(
 		payload.pendingServiceUpdates,
 		&payload.pendingServiceUpdateOrder,
-		payload.servicesMap[swarmSecret.Path],
+		payload.services,
 		swarmSecret.Path,
 		createdVersion,
 	)
@@ -146,23 +146,25 @@ func (s *Synchronizer) enqueueSameVersionServices(
 ) {
 	for _, service := range services {
 		for _, ref := range service.Spec.TaskTemplate.ContainerSpec.Secrets {
-			if ref.File.Name == externalSecret.Path && ref.SecretID != swarmSecret.ID {
-				task, ok := pendingServiceUpdates[service.ID]
-				if !ok {
-					task = &ServiceTask{
-						Service: service,
-						Secrets: make(map[string]updatingServiceSecret),
-					}
+			if ref.File.Name != externalSecret.Path || ref.SecretID == swarmSecret.ID {
+				continue
+			}
 
-					pendingServiceUpdates[service.ID] = task
-					*pendingServiceUpdateOrder = append(*pendingServiceUpdateOrder, task)
+			task, ok := pendingServiceUpdates[service.ID]
+			if !ok {
+				task = &ServiceTask{
+					Service: service,
+					Secrets: make(map[string]updatingServiceSecret),
 				}
 
-				task.Secrets[swarmSecret.Path] = updatingServiceSecret{
-					Name: externalSecret.Path,
-					ID:   swarmSecret.LatestVersion().ExternalID,
-					Path: swarmSecret.Path,
-				}
+				pendingServiceUpdates[service.ID] = task
+				*pendingServiceUpdateOrder = append(*pendingServiceUpdateOrder, task)
+			}
+
+			task.Secrets[swarmSecret.Path] = updatingServiceSecret{
+				Name: externalSecret.Path,
+				ID:   swarmSecret.LatestVersion().ExternalID,
+				Path: swarmSecret.Path,
 			}
 		}
 	}
@@ -176,6 +178,10 @@ func (s *Synchronizer) enqueueUpdatedServices(
 	secret engine.CreatedSecretVersion,
 ) {
 	for _, service := range services {
+		if !serviceUsesPath(service, path) {
+			continue
+		}
+
 		task, ok := pendingServiceUpdates[service.ID]
 		if !ok {
 			task = &ServiceTask{
@@ -193,6 +199,16 @@ func (s *Synchronizer) enqueueUpdatedServices(
 			Path: path,
 		}
 	}
+}
+
+func serviceUsesPath(service swarm.Service, path string) bool {
+	for _, ref := range service.Spec.TaskTemplate.ContainerSpec.Secrets {
+		if ref.File.Name == path {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (s *Synchronizer) prepareSecretPath(path string) string {

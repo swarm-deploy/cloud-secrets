@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/moby/moby/api/types/swarm"
+	"github.com/stretchr/testify/assert"
 	"github.com/swarm-deploy/cloud-secrets/internal/engine"
 	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
@@ -23,7 +24,7 @@ func TestSynchronizer_Sync(t *testing.T) {
 		{
 			name: "create missing secret",
 			setup: func(engineClient *engine.MockClient, provider *contracts.MockProvider) {
-				engineClient.EXPECT().MapServicesBySecrets(gomock.Any()).Return(map[string][]swarm.Service{}, nil)
+				engineClient.EXPECT().ListServices(gomock.Any()).Return([]swarm.Service{}, nil)
 				engineClient.EXPECT().MapSecrets(gomock.Any()).Return(map[string]*engine.ExistingSecret{}, nil)
 				provider.EXPECT().ListSecrets(gomock.Any()).Return(map[string]contracts.Secret{
 					"prod/db/password": {
@@ -60,14 +61,12 @@ func TestSynchronizer_Sync(t *testing.T) {
 					},
 				}
 
-				engineClient.EXPECT().MapServicesBySecrets(gomock.Any()).Return(map[string][]swarm.Service{
-					"prod-db-password": {
-						newService(
-							"service-id",
-							"api",
-							engine.NewSecretRef("prod-db-password", "prod-db-password", "parent-secret-id"),
-						),
-					},
+				engineClient.EXPECT().ListServices(gomock.Any()).Return([]swarm.Service{
+					newService(
+						"service-id",
+						"api",
+						engine.NewSecretRef("prod-db-password", "prod-db-password", "parent-secret-id"),
+					),
 				}, nil)
 				engineClient.EXPECT().MapSecrets(gomock.Any()).Return(map[string]*engine.ExistingSecret{
 					"prod-db-password": &existingSecret,
@@ -127,13 +126,10 @@ func TestSynchronizer_Sync(t *testing.T) {
 			)
 
 			got, err := synchronizer.Sync(context.Background())
-			if err != nil {
-				t.Fatalf("Sync() error = %v", err)
+			if !assert.NoError(t, err) {
+				return
 			}
-
-			if got != tt.want {
-				t.Fatalf("Sync() result = %+v, want %+v", got, tt.want)
-			}
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }
