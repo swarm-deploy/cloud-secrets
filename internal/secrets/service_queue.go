@@ -5,7 +5,8 @@ import (
 )
 
 type TaskQueue struct {
-	services map[string]*ServiceTask
+	services    map[string]*ServiceTask
+	serviceList []*ServiceTask
 
 	secrets []UpdatedSecret
 }
@@ -39,10 +40,13 @@ func newServiceQueue() *TaskQueue {
 
 func (q *TaskQueue) PushService(service swarm.Service, secret UpdatingServiceSecret) {
 	if _, ok := q.services[service.ID]; !ok {
-		q.services[service.ID] = &ServiceTask{
+		task := &ServiceTask{
 			Service: service,
 			Secrets: make(map[string]UpdatingServiceSecret),
 		}
+
+		q.services[service.ID] = task
+		q.serviceList = append(q.serviceList, task)
 	}
 
 	q.services[service.ID].Secrets[secret.Path] = secret

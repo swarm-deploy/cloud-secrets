@@ -63,7 +63,8 @@ type syncPayload struct {
 	swarmSecretsMap map[string]*engine.ExistingSecret
 	externalSecrets map[string]contracts.Secret
 
-	pendingServices *TaskQueue
+	pendingServices      *TaskQueue
+	pendingServiceOffset int
 }
 
 func (s *Synchronizer) Sync(ctx context.Context) (Result, error) {
@@ -311,7 +312,15 @@ func (s *Synchronizer) enqueueUpdatedServices(
 }
 
 func (s *Synchronizer) applyServiceUpdates(ctx context.Context, payload *syncPayload) error {
-	for _, service := range payload.pendingServices.services {
+	if len(payload.pendingServices.serviceList) == 0 {
+		return nil
+	}
+
+	if len(payload.pendingServices.serviceList) <= payload.pendingServiceOffset {
+		return nil
+	}
+
+	for _, service := range payload.pendingServices.serviceList[payload.pendingServiceOffset:] {
 		secrets := []*swarm.SecretReference{}
 		for _, secRef := range service.Service.Spec.TaskTemplate.ContainerSpec.Secrets {
 			if _, ok := service.Secrets[secRef.File.Name]; !ok {
@@ -334,6 +343,8 @@ func (s *Synchronizer) applyServiceUpdates(ctx context.Context, payload *syncPay
 		if err != nil {
 			return fmt.Errorf("update service %q: %w", service.Service.Spec.Name, err)
 		}
+
+		payload.pendingServiceOffset++
 	}
 
 	return nil
