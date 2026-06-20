@@ -63,13 +63,36 @@ type syncPayload struct {
 	swarmSecretsMap map[string]*engine.ExistingSecret
 	externalSecrets map[string]contracts.Secret
 
-	pendingServices      *TaskQueue
-	pendingServiceOffset int
+	pendingServiceUpdates     map[string]*ServiceTask
+	pendingServiceUpdateOrder []*ServiceTask
+	pendingSecretRestores     []UpdatedSecret
+	pendingServiceOffset      int
+}
+
+type ServiceTask struct {
+	Service swarm.Service
+	Secrets map[string]UpdatingServiceSecret
+}
+
+type UpdatedSecret struct {
+	Name  string
+	ID    string
+	Path  string
+	Value []byte
+
+	ExternalID string
+}
+
+type UpdatingServiceSecret struct {
+	Name string
+	ID   string
+	Path string
 }
 
 func (s *Synchronizer) Sync(ctx context.Context) (Result, error) {
 	payload := &syncPayload{
-		pendingServices: newServiceQueue(),
+		pendingServiceUpdates: make(map[string]*ServiceTask),
+		pendingSecretRestores: make([]UpdatedSecret, 0),
 	}
 
 	err := s.pipeline.Run(ctx, payload)
@@ -185,7 +208,8 @@ func (s *Synchronizer) processExternalSecret(
 
 	if swarmSecret.LatestVersion().ExternalID == externalSecret.VersionID {
 		s.enqueueSameVersionServices(
-			payload.pendingServices,
+			payload.pendingServiceUpdates,
+			&payload.pendingServiceUpdateOrder,
 			payload.servicesMap[swarmSecret.Path],
 			externalSecret,
 			swarmSecret,
@@ -242,12 +266,13 @@ func (s *Synchronizer) createUpdatedSecretVersion(
 	}
 
 	s.enqueueUpdatedServices(
-		payload.pendingServices,
+		payload.pendingServiceUpdates,
+		&payload.pendingServiceUpdateOrder,
 		payload.servicesMap[swarmSecret.Path],
 		swarmSecret.Path,
 		createdVersion,
 	)
-	payload.pendingServices.PushSecret(UpdatedSecret{
+	payload.pendingSecretRestores = append(payload.pendingSecretRestores, UpdatedSecret{
 		Name:       createdVersion.Name,
 		ID:         createdVersion.ID,
 		Path:       swarmSecret.Path,
@@ -278,7 +303,8 @@ func (s *Synchronizer) getUpdatedSecretPayload(
 }
 
 func (s *Synchronizer) enqueueSameVersionServices(
-	queue *TaskQueue,
+	pendingServiceUpdates map[string]*ServiceTask,
+	pendingServiceUpdateOrder *[]*ServiceTask,
 	services []swarm.Service,
 	externalSecret contracts.Secret,
 	swarmSecret *engine.ExistingSecret,
@@ -286,41 +312,64 @@ func (s *Synchronizer) enqueueSameVersionServices(
 	for _, service := range services {
 		for _, ref := range service.Spec.TaskTemplate.ContainerSpec.Secrets {
 			if ref.File.Name == externalSecret.Path && ref.SecretID != swarmSecret.ID {
-				queue.PushService(service, UpdatingServiceSecret{
+				task, ok := pendingServiceUpdates[service.ID]
+				if !ok {
+					task = &ServiceTask{
+						Service: service,
+						Secrets: make(map[string]UpdatingServiceSecret),
+					}
+
+					pendingServiceUpdates[service.ID] = task
+					*pendingServiceUpdateOrder = append(*pendingServiceUpdateOrder, task)
+				}
+
+				task.Secrets[swarmSecret.Path] = UpdatingServiceSecret{
 					Name: externalSecret.Path,
 					ID:   swarmSecret.LatestVersion().ExternalID,
 					Path: swarmSecret.Path,
-				})
+				}
 			}
 		}
 	}
 }
 
 func (s *Synchronizer) enqueueUpdatedServices(
-	queue *TaskQueue,
+	pendingServiceUpdates map[string]*ServiceTask,
+	pendingServiceUpdateOrder *[]*ServiceTask,
 	services []swarm.Service,
 	path string,
 	secret engine.CreatedSecretVersion,
 ) {
 	for _, service := range services {
-		queue.PushService(service, UpdatingServiceSecret{
+		task, ok := pendingServiceUpdates[service.ID]
+		if !ok {
+			task = &ServiceTask{
+				Service: service,
+				Secrets: make(map[string]UpdatingServiceSecret),
+			}
+
+			pendingServiceUpdates[service.ID] = task
+			*pendingServiceUpdateOrder = append(*pendingServiceUpdateOrder, task)
+		}
+
+		task.Secrets[path] = UpdatingServiceSecret{
 			Name: secret.Name,
 			ID:   secret.ID,
 			Path: path,
-		})
+		}
 	}
 }
 
 func (s *Synchronizer) applyServiceUpdates(ctx context.Context, payload *syncPayload) error {
-	if len(payload.pendingServices.serviceList) == 0 {
+	if len(payload.pendingServiceUpdateOrder) == 0 {
 		return nil
 	}
 
-	if len(payload.pendingServices.serviceList) <= payload.pendingServiceOffset {
+	if len(payload.pendingServiceUpdateOrder) <= payload.pendingServiceOffset {
 		return nil
 	}
 
-	for _, service := range payload.pendingServices.serviceList[payload.pendingServiceOffset:] {
+	for _, service := range payload.pendingServiceUpdateOrder[payload.pendingServiceOffset:] {
 		secrets := []*swarm.SecretReference{}
 		for _, secRef := range service.Service.Spec.TaskTemplate.ContainerSpec.Secrets {
 			if _, ok := service.Secrets[secRef.File.Name]; !ok {
@@ -351,15 +400,15 @@ func (s *Synchronizer) applyServiceUpdates(ctx context.Context, payload *syncPay
 }
 
 func (s *Synchronizer) restorePendingSecrets(ctx context.Context, payload *syncPayload) error {
-	return s.restoreSecrets(ctx, payload.pendingServices, payload.swarmSecretsMap)
+	return s.restoreSecrets(ctx, payload.pendingSecretRestores, payload.swarmSecretsMap)
 }
 
 func (s *Synchronizer) restoreSecrets(
 	ctx context.Context,
-	pendingServices *TaskQueue,
+	pendingSecretRestores []UpdatedSecret,
 	swarmSecretsMap map[string]*engine.ExistingSecret,
 ) error {
-	for _, secret := range pendingServices.secrets {
+	for _, secret := range pendingSecretRestores {
 		slog.DebugContext(ctx, "[synchronizer] removing previous secret versions in engine",
 			slog.String("secret.path", secret.Path),
 			slog.Int("secret.previous_versions.count", len(swarmSecretsMap[secret.Path].Versions)),
@@ -404,9 +453,9 @@ func (p *syncPayload) hasPendingChanges() bool {
 }
 
 func (p *syncPayload) hasPendingServiceUpdates() bool {
-	return len(p.pendingServices.services) > 0
+	return len(p.pendingServiceUpdates) > 0
 }
 
 func (p *syncPayload) hasPendingSecretRestores() bool {
-	return len(p.pendingServices.secrets) > 0
+	return len(p.pendingSecretRestores) > 0
 }
