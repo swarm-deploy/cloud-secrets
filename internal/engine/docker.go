@@ -11,6 +11,8 @@ import (
 	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
 )
 
+const managedLabel = "cloud-secrets.secret.managed"
+
 type DockerClient struct {
 	client  dock.APIClient
 	metrics metrics.Docker
@@ -55,6 +57,7 @@ func (c *DockerClient) CreateSecretVersion(
 					"logical_path":        secret.Path,
 					"external_path":       secret.ExternalPath,
 					"external_version_id": version.ExternalID,
+					managedLabel:          "true",
 				},
 			},
 			Data: version.Value,
@@ -116,6 +119,7 @@ func (c *DockerClient) MapSecrets(ctx context.Context) (map[string]*ExistingSecr
 			ID:           secret.ID,
 			Path:         path,
 			ExternalPath: c.getLabel(secret.Spec.Labels, "external_path"),
+			Managed:      secret.Spec.Labels[managedLabel] == "true",
 			Versions: []ExistingSecretVersion{
 				{
 					ID:         secret.ID,

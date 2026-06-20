@@ -55,6 +55,8 @@ type ExistingSecret struct {
 	Path         string
 	ExternalPath string
 
+	Managed bool
+
 	Versions []ExistingSecretVersion
 
 	latestVersion ExistingSecretVersion
