@@ -14,7 +14,7 @@ func (d FolderDelimiter) Validate() error {
 	case FolderDelimiterDash, FolderDelimiterUnderscore:
 		return nil
 	default:
-		return fmt.Errorf("invalid folder delimiter: %s, possible: [%s, %s]",
+		return fmt.Errorf("invalid folder delimiter: %q, possible: [%s, %s]",
 			d,
 			FolderDelimiterDash,
 			FolderDelimiterUnderscore,
