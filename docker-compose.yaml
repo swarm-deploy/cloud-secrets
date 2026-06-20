@@ -32,7 +32,7 @@ services:
       - CLOUDRU_IAM_CLIENT_SECRET=/var/run/secrets/iam_secret
       - LOG_LEVEL=debug
       - CS_REFRESH_INTERVAL=1m
-      - CS_SECRET_NAME_FOLDER_DELIMITER="-"
+      - CS_SECRET_NAME_FOLDER_DELIMITER=-
     secrets:
       - iam_id
       - iam_secret

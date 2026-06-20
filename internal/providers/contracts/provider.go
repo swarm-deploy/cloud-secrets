@@ -1,3 +1,4 @@
+//go:generate mockgen -source=$GOFILE -destination=mocks.go -package=contracts
 package contracts
 
 import "context"

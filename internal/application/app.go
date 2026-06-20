@@ -11,12 +11,13 @@ import (
 	"time"
 
 	dock "github.com/moby/moby/client"
+
 	"github.com/swarm-deploy/cloud-secrets/internal/config"
 	"github.com/swarm-deploy/cloud-secrets/internal/engine"
 	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/cloudru"
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
-	"github.com/swarm-deploy/cloud-secrets/internal/secrets"
+	"github.com/swarm-deploy/cloud-secrets/internal/sync"
 )
 
 type Application struct {
@@ -30,7 +31,7 @@ type Application struct {
 
 	docker dock.APIClient
 
-	synchronizer *secrets.Synchronizer
+	synchronizer *sync.Synchronizer
 
 	synchronizing atomic.Bool
 }
@@ -57,8 +58,8 @@ func NewApplication(ctx context.Context, cfg config.Config, metricsGroup *metric
 
 	app.secretProvider = contracts.WithMetrics(provider, metricsGroup.Provider)
 
-	app.synchronizer = secrets.NewSynchronizer(
-		engine.NewClient(dockerClient, metricsGroup.Docker),
+	app.synchronizer = sync.NewSynchronizer(
+		engine.NewDockerClient(dockerClient, metricsGroup.Docker),
 		provider,
 		metricsGroup.Secrets,
 		cfg.CloudSecrets.SecretNameFolderDelimiter,
