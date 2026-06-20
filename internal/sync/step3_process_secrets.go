@@ -151,14 +151,14 @@ func (s *Synchronizer) enqueueSameVersionServices(
 				if !ok {
 					task = &ServiceTask{
 						Service: service,
-						Secrets: make(map[string]UpdatingServiceSecret),
+						Secrets: make(map[string]updatingServiceSecret),
 					}
 
 					pendingServiceUpdates[service.ID] = task
 					*pendingServiceUpdateOrder = append(*pendingServiceUpdateOrder, task)
 				}
 
-				task.Secrets[swarmSecret.Path] = UpdatingServiceSecret{
+				task.Secrets[swarmSecret.Path] = updatingServiceSecret{
 					Name: externalSecret.Path,
 					ID:   swarmSecret.LatestVersion().ExternalID,
 					Path: swarmSecret.Path,
@@ -180,14 +180,14 @@ func (s *Synchronizer) enqueueUpdatedServices(
 		if !ok {
 			task = &ServiceTask{
 				Service: service,
-				Secrets: make(map[string]UpdatingServiceSecret),
+				Secrets: make(map[string]updatingServiceSecret),
 			}
 
 			pendingServiceUpdates[service.ID] = task
 			*pendingServiceUpdateOrder = append(*pendingServiceUpdateOrder, task)
 		}
 
-		task.Secrets[path] = UpdatingServiceSecret{
+		task.Secrets[path] = updatingServiceSecret{
 			Name: secret.Name,
 			ID:   secret.ID,
 			Path: path,

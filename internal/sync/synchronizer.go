@@ -61,7 +61,7 @@ type syncPayload struct {
 
 type ServiceTask struct {
 	Service swarm.Service
-	Secrets map[string]UpdatingServiceSecret
+	Secrets map[string]updatingServiceSecret
 }
 
 type UpdatedSecret struct {
@@ -73,7 +73,7 @@ type UpdatedSecret struct {
 	ExternalID string
 }
 
-type UpdatingServiceSecret struct {
+type updatingServiceSecret struct {
 	Name string
 	ID   string
 	Path string
