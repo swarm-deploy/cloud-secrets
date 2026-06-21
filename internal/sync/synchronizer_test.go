@@ -28,9 +28,9 @@ func TestSynchronizer_Sync(t *testing.T) {
 				engineClient.EXPECT().MapSecrets(gomock.Any()).Return(map[string]*engine.ExistingSecret{}, nil)
 				provider.EXPECT().ListSecrets(gomock.Any()).Return(map[string]contracts.Secret{
 					"prod/db/password": {
-						Path:         "prod/db/password",
-						ExternalPath: "prod/db/password",
-						VersionID:    "version-1",
+						Path:      "prod/db/password",
+						FullPath:  "prod/db/password",
+						VersionID: "version-1",
 					},
 				}, nil)
 				provider.EXPECT().GetSecretPayload(gomock.Any(), "prod/db/password").Return([]byte("payload-1"), nil)
@@ -75,9 +75,9 @@ func TestSynchronizer_Sync(t *testing.T) {
 				}, nil)
 				provider.EXPECT().ListSecrets(gomock.Any()).Return(map[string]contracts.Secret{
 					"prod/db/password": {
-						Path:         "prod/db/password",
-						ExternalPath: "prod/db/password",
-						VersionID:    "version-2",
+						Path:      "prod/db/password",
+						FullPath:  "prod/db/password",
+						VersionID: "version-2",
 					},
 				}, nil)
 				provider.EXPECT().GetSecretPayload(gomock.Any(), "prod/db/password").Return([]byte("payload-2"), nil)
@@ -141,9 +141,9 @@ func TestSynchronizer_Sync(t *testing.T) {
 				}, nil)
 				provider.EXPECT().ListSecrets(gomock.Any()).Return(map[string]contracts.Secret{
 					"prod/db/password": {
-						Path:         "prod/db/password",
-						ExternalPath: "prod/db/password",
-						VersionID:    "version-2",
+						Path:      "prod/db/password",
+						FullPath:  "prod/db/password",
+						VersionID: "version-2",
 					},
 				}, nil)
 				engineClient.EXPECT().UpdateService(gomock.Any(), newService(
@@ -186,9 +186,9 @@ func TestSynchronizer_Sync(t *testing.T) {
 				}, nil)
 				provider.EXPECT().ListSecrets(gomock.Any()).Return(map[string]contracts.Secret{
 					"prod/db/password": {
-						Path:         "prod/db/password",
-						ExternalPath: "prod/db/password",
-						VersionID:    "version-2",
+						Path:      "prod/db/password",
+						FullPath:  "prod/db/password",
+						VersionID: "version-2",
 					},
 				}, nil)
 				engineClient.EXPECT().UpdateService(gomock.Any(), newService(

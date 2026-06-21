@@ -17,8 +17,8 @@ type Secret struct {
 	VersionID string
 	// Path is the provider path within the synchronization scope.
 	Path string
-	// ExternalPath is the full secret path in external storage.
-	ExternalPath string
+	// FullPath is the full secret path in external storage.
+	FullPath string
 }
 
 type ProviderDefinition struct {

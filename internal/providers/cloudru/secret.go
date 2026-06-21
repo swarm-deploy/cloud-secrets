@@ -2,6 +2,7 @@ package cloudru
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -40,24 +41,33 @@ func (p *Provider) ListSecrets(ctx context.Context) (map[string]contracts.Secret
 	secretsMap := map[string]contracts.Secret{}
 
 	for _, secret := range secretsResp.Secrets {
-		versionID := p.secretLatestVersionID(secret)
-		if versionID == nil {
-			return nil, fmt.Errorf("corrupted version of secret %q", secret.Path)
+		mapped, merr := p.mapSecret(secret)
+		if merr != nil {
+			return nil, fmt.Errorf("map secret %q: %w", secret.Name, merr)
 		}
 
-		scopedPath, err := p.scopeSecretPath(secret.Path)
-		if err != nil {
-			return nil, fmt.Errorf("scope secret path %q: %w", secret.Path, err)
-		}
-
-		secretsMap[scopedPath] = contracts.Secret{
-			Path:         scopedPath,
-			ExternalPath: secret.Path,
-			VersionID:    *versionID,
-		}
+		secretsMap[secret.Path] = mapped
 	}
 
 	return secretsMap, nil
+}
+
+func (p *Provider) mapSecret(secret *v2.Secret) (contracts.Secret, error) {
+	versionID := p.secretLatestVersionID(secret)
+	if versionID == nil {
+		return contracts.Secret{}, fmt.Errorf("corrupted version of secret %q", secret.Path)
+	}
+
+	scopedPath, err := p.scopeSecretPath(secret.Path)
+	if err != nil {
+		return contracts.Secret{}, fmt.Errorf("scope secret path %q: %w", secret.Path, err)
+	}
+
+	return contracts.Secret{
+		Path:      scopedPath,
+		FullPath:  secret.Path,
+		VersionID: *versionID,
+	}, nil
 }
 
 func (p *Provider) secretLatestVersionID(secret *v2.Secret) *string {
@@ -105,7 +115,7 @@ func (p *Provider) scopeSecretPath(path string) (string, error) {
 	}
 
 	if trimmedPath == rootFolder {
-		return "", fmt.Errorf("path matches root folder")
+		return "", errors.New("path matches root folder")
 	}
 
 	prefix := rootFolder + "/"
