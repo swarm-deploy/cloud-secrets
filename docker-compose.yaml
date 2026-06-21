@@ -30,6 +30,8 @@ services:
       - CLOUDRU_PROJECT_ID=<cloudru-project-id>
       - CLOUDRU_IAM_CLIENT_ID=/var/run/secrets/iam_id
       - CLOUDRU_IAM_CLIENT_SECRET=/var/run/secrets/iam_secret
+      - CLOUDRU_ROOT_FOLDER=prod/apps
+      - CLOUDRU_ROOT_FOLDER_OMIT_PREFIX=true
       - LOG_LEVEL=debug
       - CS_REFRESH_INTERVAL=1m
       - CS_SECRET_NAME_FOLDER_DELIMITER=-

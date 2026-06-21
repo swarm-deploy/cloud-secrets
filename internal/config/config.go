@@ -34,5 +34,9 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("validate CS_SECRET_NAME_FOLDER_DELIMITER: %w", err)
 	}
 
+	if err = cfg.CloudRu.Validate(); err != nil {
+		return nil, fmt.Errorf("validate cloudru config: %w", err)
+	}
+
 	return &cfg, nil
 }

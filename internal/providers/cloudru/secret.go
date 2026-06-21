@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	v2 "github.com/cloudru-tech/secret-manager-sdk/api/v2"
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
@@ -11,7 +12,7 @@ import (
 
 func (p *Provider) GetSecretPayload(ctx context.Context, key string) ([]byte, error) {
 	resp, err := p.secretManager.V2.SecretService.Access(ctx, &v2.AccessSecretRequest{
-		Path:      key,
+		Path:      p.resolveSecretPath(key),
 		ProjectId: p.cfg.ProjectID,
 	})
 	if err != nil {
@@ -22,10 +23,16 @@ func (p *Provider) GetSecretPayload(ctx context.Context, key string) ([]byte, er
 }
 
 func (p *Provider) ListSecrets(ctx context.Context) (map[string]contracts.Secret, error) {
-	secretsResp, err := p.secretManager.V2.SecretService.Search(ctx, &v2.SearchSecretRequest{
+	req := &v2.SearchSecretRequest{
 		ProjectId: p.cfg.ProjectID,
 		Depth:     -1,
-	})
+	}
+
+	if rootFolder := string(p.cfg.RootFolder); rootFolder != "" {
+		req.Path = rootFolder
+	}
+
+	secretsResp, err := p.secretManager.V2.SecretService.Search(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -38,9 +45,15 @@ func (p *Provider) ListSecrets(ctx context.Context) (map[string]contracts.Secret
 			return nil, fmt.Errorf("corrupted version of secret %q", secret.Path)
 		}
 
-		secretsMap[secret.Path] = contracts.Secret{
-			Path:      secret.Path,
-			VersionID: *versionID,
+		scopedPath, err := p.scopeSecretPath(secret.Path)
+		if err != nil {
+			return nil, fmt.Errorf("scope secret path %q: %w", secret.Path, err)
+		}
+
+		secretsMap[scopedPath] = contracts.Secret{
+			Path:         scopedPath,
+			ExternalPath: secret.Path,
+			VersionID:    *versionID,
 		}
 	}
 
@@ -56,4 +69,49 @@ func (p *Provider) secretLatestVersionID(secret *v2.Secret) *string {
 	}
 
 	return nil
+}
+
+func (p *Provider) resolveSecretPath(path string) string {
+	if !p.cfg.RootFolderOmitPrefix {
+		return path
+	}
+
+	rootFolder := string(p.cfg.RootFolder)
+	if rootFolder == "" {
+		return path
+	}
+
+	trimmedPath := strings.Trim(path, "/")
+	if trimmedPath == "" {
+		return rootFolder
+	}
+
+	if trimmedPath == rootFolder || strings.HasPrefix(trimmedPath, rootFolder+"/") {
+		return trimmedPath
+	}
+
+	return rootFolder + "/" + trimmedPath
+}
+
+func (p *Provider) scopeSecretPath(path string) (string, error) {
+	trimmedPath := strings.Trim(path, "/")
+	if !p.cfg.RootFolderOmitPrefix {
+		return trimmedPath, nil
+	}
+
+	rootFolder := string(p.cfg.RootFolder)
+	if rootFolder == "" {
+		return trimmedPath, nil
+	}
+
+	if trimmedPath == rootFolder {
+		return "", fmt.Errorf("path matches root folder")
+	}
+
+	prefix := rootFolder + "/"
+	if !strings.HasPrefix(trimmedPath, prefix) {
+		return "", fmt.Errorf("path is outside root folder %q", rootFolder)
+	}
+
+	return strings.TrimPrefix(trimmedPath, prefix), nil
 }

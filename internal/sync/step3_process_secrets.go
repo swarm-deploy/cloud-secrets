@@ -77,7 +77,7 @@ func (s *Synchronizer) createMissingSecret(
 	err = s.engine.CreateSecret(ctx, engine.CreatingSecret{
 		Path:              fixedSecretPath,
 		Value:             payload,
-		ExternalPath:      externalSecret.Path,
+		ExternalPath:      externalSecret.ExternalPath,
 		ExternalVersionID: externalSecret.VersionID,
 	})
 	if err != nil {
@@ -122,7 +122,7 @@ func (s *Synchronizer) createUpdatedSecretVersion(
 	payload.pendingSecretRestores = append(payload.pendingSecretRestores, UpdatedSecret{
 		Path:         swarmSecret.Path,
 		Value:        secretPayload.Value,
-		ExternalPath: swarmSecret.ExternalPath,
+		ExternalPath: externalSecret.ExternalPath,
 		ExternalID:   externalSecret.VersionID,
 	})
 
