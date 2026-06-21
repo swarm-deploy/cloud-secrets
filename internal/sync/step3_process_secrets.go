@@ -46,9 +46,15 @@ func (s *Synchronizer) processExternalSecret(
 			payload.pendingServiceUpdates,
 			&payload.pendingServiceUpdateOrder,
 			payload.services,
-			externalSecret,
 			swarmSecret,
 		)
+
+		if swarmSecret.Managed && len(swarmSecret.Versions) > 1 {
+			payload.pendingVersionRemovals = append(payload.pendingVersionRemovals, SecretVersionRemoval{
+				Secret: swarmSecret,
+			})
+		}
+
 		payload.result.Skipped++
 
 		return nil
@@ -100,6 +106,12 @@ func (s *Synchronizer) createUpdatedSecretVersion(
 		return fmt.Errorf("create secret version: %w", err)
 	}
 
+	swarmSecret.Managed = true
+	payload.pendingVersionRemovals = append(payload.pendingVersionRemovals, SecretVersionRemoval{
+		Secret:       swarmSecret,
+		RemoveParent: true,
+	})
+
 	s.enqueueUpdatedServices(
 		payload.pendingServiceUpdates,
 		&payload.pendingServiceUpdateOrder,
@@ -108,11 +120,10 @@ func (s *Synchronizer) createUpdatedSecretVersion(
 		createdVersion,
 	)
 	payload.pendingSecretRestores = append(payload.pendingSecretRestores, UpdatedSecret{
-		Name:       createdVersion.Name,
-		ID:         createdVersion.ID,
-		Path:       swarmSecret.Path,
-		Value:      secretPayload.Value,
-		ExternalID: externalSecret.VersionID,
+		Path:         swarmSecret.Path,
+		Value:        secretPayload.Value,
+		ExternalPath: swarmSecret.ExternalPath,
+		ExternalID:   externalSecret.VersionID,
 	})
 
 	payload.result.Updated++
@@ -141,12 +152,11 @@ func (s *Synchronizer) enqueueSameVersionServices(
 	pendingServiceUpdates map[string]*ServiceTask,
 	pendingServiceUpdateOrder *[]*ServiceTask,
 	services []swarm.Service,
-	externalSecret contracts.Secret,
 	swarmSecret *engine.ExistingSecret,
 ) {
 	for _, service := range services {
 		for _, ref := range service.Spec.TaskTemplate.ContainerSpec.Secrets {
-			if ref.File.Name != externalSecret.Path || ref.SecretID == swarmSecret.ID {
+			if ref.File.Name != swarmSecret.Path || ref.SecretID == swarmSecret.ID {
 				continue
 			}
 
@@ -162,8 +172,8 @@ func (s *Synchronizer) enqueueSameVersionServices(
 			}
 
 			task.Secrets[swarmSecret.Path] = updatingServiceSecret{
-				Name: externalSecret.Path,
-				ID:   swarmSecret.LatestVersion().ExternalID,
+				Name: swarmSecret.Path,
+				ID:   swarmSecret.ID,
 				Path: swarmSecret.Path,
 			}
 		}

@@ -85,8 +85,9 @@ func (c *DockerClient) CreateSecret(ctx context.Context, spec CreatingSecret) er
 				Name: spec.Path,
 				Labels: map[string]string{
 					"logical_path":        spec.Path,
-					"external_path":       spec.Path,
+					"external_path":       spec.ExternalPath,
 					"external_version_id": spec.ExternalVersionID,
+					managedLabel:          "true",
 				},
 			},
 			Data: spec.Value,
@@ -155,6 +156,7 @@ func (c *DockerClient) MapSecrets(ctx context.Context) (map[string]*ExistingSecr
 		}
 
 		parent.Versions = append(parent.Versions, version)
+		parent.Managed = parent.Managed || secret.Spec.Labels[managedLabel] == "true"
 
 		if secret.UpdatedAt.After(parent.latestVersion.updatedAt) {
 			parent.latestVersion = version
@@ -172,5 +174,16 @@ func (c *DockerClient) getLabel(labels map[string]string, key string) string {
 }
 
 func (v *ExistingSecret) LatestVersion() ExistingSecretVersion {
+	if v.latestVersion.ID == "" && len(v.Versions) > 0 {
+		latest := v.Versions[0]
+		for _, version := range v.Versions[1:] {
+			if version.updatedAt.After(latest.updatedAt) {
+				latest = version
+			}
+		}
+
+		return latest
+	}
+
 	return v.latestVersion
 }

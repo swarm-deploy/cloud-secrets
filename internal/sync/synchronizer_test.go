@@ -49,6 +49,7 @@ func TestSynchronizer_Sync(t *testing.T) {
 					ID:           "parent-secret-id",
 					Path:         "prod-db-password",
 					ExternalPath: "prod/db/password",
+					Managed:      true,
 					Versions: []engine.ExistingSecretVersion{
 						{
 							ID:         "parent-secret-id",
@@ -106,6 +107,94 @@ func TestSynchronizer_Sync(t *testing.T) {
 			},
 			want: Result{Updated: 1},
 		},
+		{
+			name: "remove old versions for managed secret on same version",
+			setup: func(engineClient *engine.MockClient, provider *contracts.MockProvider) {
+				existingSecret := engine.ExistingSecret{
+					ID:           "parent-secret-id",
+					Path:         "prod-db-password",
+					ExternalPath: "prod/db/password",
+					Managed:      true,
+					Versions: []engine.ExistingSecretVersion{
+						{
+							ID:         "parent-secret-id",
+							ExternalID: "version-2",
+						},
+						{
+							ID:         "old-version-secret-id",
+							ExternalID: "version-1",
+						},
+					},
+				}
+
+				engineClient.EXPECT().ListServices(gomock.Any()).Return([]swarm.Service{
+					newService(
+						"service-id",
+						"api",
+						engine.NewSecretRef("prod-db-password", "prod-db-password-version-1", "old-version-secret-id"),
+					),
+				}, nil)
+				engineClient.EXPECT().MapSecrets(gomock.Any()).Return(map[string]*engine.ExistingSecret{
+					"prod-db-password": &existingSecret,
+				}, nil)
+				provider.EXPECT().ListSecrets(gomock.Any()).Return(map[string]contracts.Secret{
+					"prod/db/password": {
+						Path:      "prod/db/password",
+						VersionID: "version-2",
+					},
+				}, nil)
+				engineClient.EXPECT().UpdateService(gomock.Any(), newService(
+					"service-id",
+					"api",
+					engine.NewSecretRef("prod-db-password", "prod-db-password", "parent-secret-id"),
+				)).Return(nil)
+				engineClient.EXPECT().RemoveSecret(gomock.Any(), "old-version-secret-id").Return(nil)
+			},
+			want: Result{Skipped: 1},
+		},
+		{
+			name: "keep old versions for unmanaged secret on same version",
+			setup: func(engineClient *engine.MockClient, provider *contracts.MockProvider) {
+				existingSecret := engine.ExistingSecret{
+					ID:           "parent-secret-id",
+					Path:         "prod-db-password",
+					ExternalPath: "prod/db/password",
+					Versions: []engine.ExistingSecretVersion{
+						{
+							ID:         "parent-secret-id",
+							ExternalID: "version-2",
+						},
+						{
+							ID:         "old-version-secret-id",
+							ExternalID: "version-1",
+						},
+					},
+				}
+
+				engineClient.EXPECT().ListServices(gomock.Any()).Return([]swarm.Service{
+					newService(
+						"service-id",
+						"api",
+						engine.NewSecretRef("prod-db-password", "prod-db-password-version-1", "old-version-secret-id"),
+					),
+				}, nil)
+				engineClient.EXPECT().MapSecrets(gomock.Any()).Return(map[string]*engine.ExistingSecret{
+					"prod-db-password": &existingSecret,
+				}, nil)
+				provider.EXPECT().ListSecrets(gomock.Any()).Return(map[string]contracts.Secret{
+					"prod/db/password": {
+						Path:      "prod/db/password",
+						VersionID: "version-2",
+					},
+				}, nil)
+				engineClient.EXPECT().UpdateService(gomock.Any(), newService(
+					"service-id",
+					"api",
+					engine.NewSecretRef("prod-db-password", "prod-db-password", "parent-secret-id"),
+				)).Return(nil)
+			},
+			want: Result{Skipped: 1},
+		},
 	}
 
 	for _, tt := range tests {
@@ -134,7 +223,7 @@ func TestSynchronizer_Sync(t *testing.T) {
 	}
 }
 
-func newService(id string, name string, secrets ...*swarm.SecretReference) swarm.Service {
+func newService(id string, name string, secrets ...*swarm.SecretReference) swarm.Service { //nolint:unparam // test
 	return swarm.Service{
 		ID: id,
 		Spec: swarm.ServiceSpec{

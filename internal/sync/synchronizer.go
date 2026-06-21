@@ -55,6 +55,7 @@ type syncPayload struct {
 
 	pendingServiceUpdates     map[string]*ServiceTask
 	pendingServiceUpdateOrder []*ServiceTask
+	pendingVersionRemovals    []SecretVersionRemoval
 	pendingSecretRestores     []UpdatedSecret
 	pendingServiceOffset      int
 }
@@ -65,12 +66,16 @@ type ServiceTask struct {
 }
 
 type UpdatedSecret struct {
-	Name  string
-	ID    string
-	Path  string
-	Value []byte
+	Path         string
+	Value        []byte
+	ExternalPath string
 
 	ExternalID string
+}
+
+type SecretVersionRemoval struct {
+	Secret       *engine.ExistingSecret
+	RemoveParent bool
 }
 
 type updatingServiceSecret struct {
@@ -81,8 +86,9 @@ type updatingServiceSecret struct {
 
 func (s *Synchronizer) Sync(ctx context.Context) (Result, error) {
 	payload := &syncPayload{
-		pendingServiceUpdates: make(map[string]*ServiceTask),
-		pendingSecretRestores: make([]UpdatedSecret, 0),
+		pendingServiceUpdates:  make(map[string]*ServiceTask),
+		pendingVersionRemovals: make([]SecretVersionRemoval, 0),
+		pendingSecretRestores:  make([]UpdatedSecret, 0),
 	}
 
 	err := s.pipeline.Run(ctx, payload)
@@ -131,6 +137,14 @@ func (s *Synchronizer) attachPipeline() {
 	})
 
 	s.pipeline.Add(gopipe.Step[*syncPayload]{
+		Name: stepRemoveOldVersions,
+		When: gopipe.When(func(payload *syncPayload) bool {
+			return payload.hasPendingVersionRemovals()
+		}),
+		Run: s.removePendingOldVersions,
+	})
+
+	s.pipeline.Add(gopipe.Step[*syncPayload]{
 		Name: stepRestoreSecrets,
 		When: gopipe.When(func(payload *syncPayload) bool {
 			return payload.hasPendingSecretRestores()
@@ -140,11 +154,15 @@ func (s *Synchronizer) attachPipeline() {
 }
 
 func (p *syncPayload) hasPendingChanges() bool {
-	return p.hasPendingServiceUpdates() || p.hasPendingSecretRestores()
+	return p.hasPendingServiceUpdates() || p.hasPendingVersionRemovals() || p.hasPendingSecretRestores()
 }
 
 func (p *syncPayload) hasPendingServiceUpdates() bool {
 	return len(p.pendingServiceUpdates) > 0
+}
+
+func (p *syncPayload) hasPendingVersionRemovals() bool {
+	return len(p.pendingVersionRemovals) > 0
 }
 
 func (p *syncPayload) hasPendingSecretRestores() bool {
