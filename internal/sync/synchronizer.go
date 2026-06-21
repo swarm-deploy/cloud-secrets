@@ -55,7 +55,7 @@ type syncPayload struct {
 
 	pendingServiceUpdates     map[string]*ServiceTask
 	pendingServiceUpdateOrder []*ServiceTask
-	pendingVersionRemovals    []*engine.ExistingSecret
+	pendingVersionRemovals    []SecretVersionRemoval
 	pendingSecretRestores     []UpdatedSecret
 	pendingServiceOffset      int
 }
@@ -66,12 +66,16 @@ type ServiceTask struct {
 }
 
 type UpdatedSecret struct {
-	Name  string
-	ID    string
-	Path  string
-	Value []byte
+	Path         string
+	Value        []byte
+	ExternalPath string
 
 	ExternalID string
+}
+
+type SecretVersionRemoval struct {
+	Secret       *engine.ExistingSecret
+	RemoveParent bool
 }
 
 type updatingServiceSecret struct {
@@ -83,7 +87,7 @@ type updatingServiceSecret struct {
 func (s *Synchronizer) Sync(ctx context.Context) (Result, error) {
 	payload := &syncPayload{
 		pendingServiceUpdates:  make(map[string]*ServiceTask),
-		pendingVersionRemovals: make([]*engine.ExistingSecret, 0),
+		pendingVersionRemovals: make([]SecretVersionRemoval, 0),
 		pendingSecretRestores:  make([]UpdatedSecret, 0),
 	}
 

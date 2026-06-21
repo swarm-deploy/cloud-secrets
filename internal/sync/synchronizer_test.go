@@ -223,7 +223,7 @@ func TestSynchronizer_Sync(t *testing.T) {
 	}
 }
 
-func newService(id string, name string, secrets ...*swarm.SecretReference) swarm.Service {
+func newService(id string, name string, secrets ...*swarm.SecretReference) swarm.Service { //nolint:unparam // test
 	return swarm.Service{
 		ID: id,
 		Spec: swarm.ServiceSpec{

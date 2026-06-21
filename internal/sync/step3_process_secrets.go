@@ -50,7 +50,9 @@ func (s *Synchronizer) processExternalSecret(
 		)
 
 		if swarmSecret.Managed && len(swarmSecret.Versions) > 1 {
-			payload.pendingVersionRemovals = append(payload.pendingVersionRemovals, swarmSecret)
+			payload.pendingVersionRemovals = append(payload.pendingVersionRemovals, SecretVersionRemoval{
+				Secret: swarmSecret,
+			})
 		}
 
 		payload.result.Skipped++
@@ -105,6 +107,10 @@ func (s *Synchronizer) createUpdatedSecretVersion(
 	}
 
 	swarmSecret.Managed = true
+	payload.pendingVersionRemovals = append(payload.pendingVersionRemovals, SecretVersionRemoval{
+		Secret:       swarmSecret,
+		RemoveParent: true,
+	})
 
 	s.enqueueUpdatedServices(
 		payload.pendingServiceUpdates,
@@ -114,11 +120,10 @@ func (s *Synchronizer) createUpdatedSecretVersion(
 		createdVersion,
 	)
 	payload.pendingSecretRestores = append(payload.pendingSecretRestores, UpdatedSecret{
-		Name:       createdVersion.Name,
-		ID:         createdVersion.ID,
-		Path:       swarmSecret.Path,
-		Value:      secretPayload.Value,
-		ExternalID: externalSecret.VersionID,
+		Path:         swarmSecret.Path,
+		Value:        secretPayload.Value,
+		ExternalPath: swarmSecret.ExternalPath,
+		ExternalID:   externalSecret.VersionID,
 	})
 
 	payload.result.Updated++
