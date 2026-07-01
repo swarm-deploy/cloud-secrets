@@ -112,7 +112,7 @@ func (c *DockerClient) MapSecrets(ctx context.Context) (map[string]*ExistingSecr
 	// collect secrets
 	for _, secret := range secrets.Items {
 		path := c.getLabel(secret.Spec.Labels, "logical_path")
-		if path != secret.Spec.Name {
+		if path == "" || path != secret.Spec.Name {
 			continue
 		}
 
@@ -139,7 +139,7 @@ func (c *DockerClient) MapSecrets(ctx context.Context) (map[string]*ExistingSecr
 	// collect versions
 	for _, secret := range secrets.Items {
 		path := c.getLabel(secret.Spec.Labels, "logical_path")
-		if path == secret.Spec.Name {
+		if path == "" || path == secret.Spec.Name {
 			continue
 		}
 
