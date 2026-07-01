@@ -215,6 +215,7 @@ func TestSynchronizer_Sync(t *testing.T) {
 				engineClient,
 				provider,
 				metrics.NewGroup(metrics.CreateGroupParams{Namespace: "test"}).Secrets,
+				false,
 				secretname.FolderDelimiter('-'),
 			)
 
@@ -225,6 +226,142 @@ func TestSynchronizer_Sync(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestSynchronizer_Sync_CleanupOrphanedManagedSecrets(t *testing.T) {
+	t.Parallel()
+
+	existingSecret := engine.ExistingSecret{
+		ID:      "parent-secret-id",
+		Path:    "prod-db-password",
+		Managed: true,
+		Versions: []engine.ExistingSecretVersion{
+			{
+				ID: "parent-secret-id",
+			},
+			{
+				ID: "old-version-secret-id",
+			},
+		},
+	}
+
+	ctrl := gomock.NewController(t)
+	engineClient := engine.NewMockClient(ctrl)
+	provider := contracts.NewMockProvider(ctrl)
+
+	engineClient.EXPECT().ListServices(gomock.Any()).Return([]swarm.Service{}, nil).Times(2)
+	engineClient.EXPECT().MapSecrets(gomock.Any()).Return(map[string]*engine.ExistingSecret{
+		"prod-db-password": &existingSecret,
+	}, nil).Times(2)
+	provider.EXPECT().ListSecrets(gomock.Any()).Return(map[string]contracts.Secret{}, nil)
+	engineClient.EXPECT().RemoveSecret(gomock.Any(), "parent-secret-id").Return(nil)
+	engineClient.EXPECT().RemoveSecret(gomock.Any(), "old-version-secret-id").Return(nil)
+
+	synchronizer := NewSynchronizer(
+		engineClient,
+		provider,
+		metrics.NewGroup(metrics.CreateGroupParams{Namespace: "test"}).Secrets,
+		true,
+		secretname.FolderDelimiter('-'),
+	)
+
+	got, err := synchronizer.Sync(context.Background())
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	assert.Equal(t, Result{}, got)
+}
+
+func TestSynchronizer_Sync_KeepManagedSecretUsedByServiceID(t *testing.T) {
+	t.Parallel()
+
+	existingSecret := engine.ExistingSecret{
+		ID:      "parent-secret-id",
+		Path:    "prod-db-password",
+		Managed: true,
+		Versions: []engine.ExistingSecretVersion{
+			{
+				ID: "parent-secret-id",
+			},
+			{
+				ID: "old-version-secret-id",
+			},
+		},
+	}
+
+	ctrl := gomock.NewController(t)
+	engineClient := engine.NewMockClient(ctrl)
+	provider := contracts.NewMockProvider(ctrl)
+
+	engineClient.EXPECT().ListServices(gomock.Any()).Return([]swarm.Service{
+		newService(
+			"service-id",
+			"api",
+			newSecretRef("mounted-name", "prod-db-password-version-1", "old-version-secret-id"),
+		),
+	}, nil).Times(2)
+	engineClient.EXPECT().MapSecrets(gomock.Any()).Return(map[string]*engine.ExistingSecret{
+		"prod-db-password": &existingSecret,
+	}, nil).Times(2)
+	provider.EXPECT().ListSecrets(gomock.Any()).Return(map[string]contracts.Secret{}, nil)
+
+	synchronizer := NewSynchronizer(
+		engineClient,
+		provider,
+		metrics.NewGroup(metrics.CreateGroupParams{Namespace: "test"}).Secrets,
+		true,
+		secretname.FolderDelimiter('-'),
+	)
+
+	got, err := synchronizer.Sync(context.Background())
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	assert.Equal(t, Result{}, got)
+}
+
+func TestSynchronizer_Sync_SkipUnmanagedOrphanedSecretCleanup(t *testing.T) {
+	t.Parallel()
+
+	existingSecret := engine.ExistingSecret{
+		ID:   "parent-secret-id",
+		Path: "prod-db-password",
+		Versions: []engine.ExistingSecretVersion{
+			{
+				ID: "parent-secret-id",
+			},
+			{
+				ID: "old-version-secret-id",
+			},
+		},
+	}
+
+	ctrl := gomock.NewController(t)
+	engineClient := engine.NewMockClient(ctrl)
+	provider := contracts.NewMockProvider(ctrl)
+
+	engineClient.EXPECT().ListServices(gomock.Any()).Return([]swarm.Service{}, nil).Times(2)
+	engineClient.EXPECT().MapSecrets(gomock.Any()).Return(map[string]*engine.ExistingSecret{
+		"prod-db-password": &existingSecret,
+	}, nil).Times(2)
+	provider.EXPECT().ListSecrets(gomock.Any()).Return(map[string]contracts.Secret{}, nil)
+
+	synchronizer := NewSynchronizer(
+		engineClient,
+		provider,
+		metrics.NewGroup(metrics.CreateGroupParams{Namespace: "test"}).Secrets,
+		true,
+		secretname.FolderDelimiter('-'),
+	)
+
+	got, err := synchronizer.Sync(context.Background())
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	assert.Equal(t, Result{}, got)
 }
 
 func newService(id string, name string, secrets ...*swarm.SecretReference) swarm.Service { //nolint:unparam // test
@@ -240,5 +377,18 @@ func newService(id string, name string, secrets ...*swarm.SecretReference) swarm
 				},
 			},
 		},
+	}
+}
+
+func newSecretRef(fileName string, secretName string, id string) *swarm.SecretReference {
+	return &swarm.SecretReference{
+		File: &swarm.SecretReferenceFileTarget{
+			Name: fileName,
+			UID:  "0",
+			GID:  "0",
+			Mode: 0444,
+		},
+		SecretName: secretName,
+		SecretID:   id,
 	}
 }

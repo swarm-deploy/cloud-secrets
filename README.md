@@ -30,9 +30,13 @@ flowchart TD
     N --> R[Rolls updated service tasks]
     R --> O[Remove old versions]
     O --> S[Restore parent secret]
+    S --> T["Reload Swarm state"]
+    T --> U{"CS_CLEANUP_ORPHANED=true"}
+    U -->|yes| V["Remove orphaned managed secrets<br/>with all versions"]
+    U -->|no| P
 
     K --> P[Write sync result logs]
-    S --> P
+    V --> P
     M --> P
 ```
 

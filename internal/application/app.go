@@ -62,6 +62,7 @@ func NewApplication(ctx context.Context, cfg config.Config, metricsGroup *metric
 		engine.NewDockerClient(dockerClient, metricsGroup.Docker),
 		provider,
 		metricsGroup.Secrets,
+		cfg.CloudSecrets.CleanupOrphanedSecrets,
 		cfg.CloudSecrets.SecretNameFolderDelimiter,
 	)
 
