@@ -29,6 +29,7 @@ func TestSynchronizer_Sync(t *testing.T) {
 				provider.EXPECT().ListSecrets(gomock.Any()).Return(map[string]contracts.Secret{
 					"prod/db/password": {
 						Path:      "prod/db/password",
+						FullPath:  "prod/db/password",
 						VersionID: "version-1",
 					},
 				}, nil)
@@ -75,6 +76,7 @@ func TestSynchronizer_Sync(t *testing.T) {
 				provider.EXPECT().ListSecrets(gomock.Any()).Return(map[string]contracts.Secret{
 					"prod/db/password": {
 						Path:      "prod/db/password",
+						FullPath:  "prod/db/password",
 						VersionID: "version-2",
 					},
 				}, nil)
@@ -140,6 +142,7 @@ func TestSynchronizer_Sync(t *testing.T) {
 				provider.EXPECT().ListSecrets(gomock.Any()).Return(map[string]contracts.Secret{
 					"prod/db/password": {
 						Path:      "prod/db/password",
+						FullPath:  "prod/db/password",
 						VersionID: "version-2",
 					},
 				}, nil)
@@ -184,6 +187,7 @@ func TestSynchronizer_Sync(t *testing.T) {
 				provider.EXPECT().ListSecrets(gomock.Any()).Return(map[string]contracts.Secret{
 					"prod/db/password": {
 						Path:      "prod/db/password",
+						FullPath:  "prod/db/password",
 						VersionID: "version-2",
 					},
 				}, nil)

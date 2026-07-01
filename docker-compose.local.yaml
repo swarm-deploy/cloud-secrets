@@ -1,34 +1,23 @@
 version: '3.8'
 
 services:
-  example-app:
-    image: golang:1.24.7-alpine
+  cloud-secrets:
+    image: golang:1.26.2-alpine
     ports:
-      - target: 8080
-        published: 8085
-        protocol: tcp
-        mode: host
+      - "8000:8000"
     volumes:
       - ./:/app
-    working_dir: /app
-    command: go run ./examples/go-app/main.go
-    environment:
-      - MY_SECRET=/var/run/secrets/users-service-db-dsn
-    secrets:
-      - users-service-db-dsn
-
-  cloud-secrets:
-    image: swarmdeployorg/cloud-secrets:v0.1.1
-    volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    working_dir: /app
+    command: go run ./cmd/cloud-secrets/main.go
     environment:
       - CLOUDRU_PROJECT_ID=<cloudru-project-id>
       - CLOUDRU_IAM_CLIENT_ID=/var/run/secrets/iam_id
       - CLOUDRU_IAM_CLIENT_SECRET=/var/run/secrets/iam_secret
-      - CLOUDRU_ROOT_FOLDER=/
- #     - CLOUDRU_ROOT_FOLDER_OMIT_PREFIX=false
+      - CLOUDRU_ROOT_FOLDER=/infra
+      - CLOUDRU_ROOT_FOLDER_OMIT_PREFIX=true
       - CS_LOG_LEVEL=debug
-      - CS_REFRESH_INTERVAL=1m
+      - CS_REFRESH_INTERVAL=12s
       - CS_SECRET_NAME_FOLDER_DELIMITER=-
     secrets:
       - iam_id
@@ -46,6 +35,6 @@ secrets:
     external: true
   # Креды для IAM
   iam_id:
-    external: true
+    file: iam_id
   iam_secret:
-    external: true
+    file: iam_secret

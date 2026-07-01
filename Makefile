@@ -1,7 +1,7 @@
 .PHONY: test
 test:
 	go test ./...
-	docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false
+	docker stack deploy -c docker-compose.local.yaml cloud-secrets --detach=false
 
 .PHONY: lint
 lint:

@@ -29,6 +29,10 @@ func NewProvider(ctx context.Context, cfg Config) (*Provider, error) {
 		cfg: cfg,
 	}
 
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+
 	slog.Info("[cloudru] resolving endpoints")
 
 	if err := p.resolveEndpoints(ctx); err != nil {
