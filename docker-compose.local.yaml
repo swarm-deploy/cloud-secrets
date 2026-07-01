@@ -11,10 +11,10 @@ services:
     working_dir: /app
     command: go run ./cmd/cloud-secrets/main.go
     environment:
-      - CLOUDRU_PROJECT_ID=befcb5e3-78d6-4a1a-a6c2-79faf67985d3
+      - CLOUDRU_PROJECT_ID=<cloudru-project-id>
       - CLOUDRU_IAM_CLIENT_ID=/var/run/secrets/iam_id
       - CLOUDRU_IAM_CLIENT_SECRET=/var/run/secrets/iam_secret
-      - CLOUDRU_ROOT_FOLDER=infra
+      - CLOUDRU_ROOT_FOLDER=/infra
       - CLOUDRU_ROOT_FOLDER_OMIT_PREFIX=true
       - CS_LOG_LEVEL=debug
       - CS_REFRESH_INTERVAL=12s
