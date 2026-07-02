@@ -10,7 +10,7 @@ version: '3.8'
 
 services:
   cloud-secrets:
-    image: swarmdeployorg/cloud-secrets:v0.1.0
+    image: swarmdeployorg/cloud-secrets:v0.3.0
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     environment:
@@ -21,6 +21,8 @@ services:
       - CLOUDRU_IAM_CLIENT_SECRET=/var/run/secrets/iam_secret
       - CLOUDRU_ROOT_FOLDER=""
       - CLOUDRU_ROOT_FOLDER_OMIT_PREFIX=false
+      # Удаляет только managed secrets, которых больше нет в Cloud.ru
+      # и которые не используются ни одним сервисом.
       - CS_CLEANUP_ORPHANED=true
     secrets:
       - iam_id
