@@ -2,8 +2,11 @@ package sync
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
+
+	"github.com/swarm-deploy/cloud-secrets/internal/engine"
 )
 
 const stepRemoveOldVersions = "remove_old_secret_versions"
@@ -37,6 +40,15 @@ func (s *Synchronizer) removeOldVersions(
 
 			err := s.engine.RemoveSecret(ctx, version.ID)
 			if err != nil {
+				if _, ok := errors.AsType[*engine.ErrSecretNotFound](err); ok {
+					slog.DebugContext(ctx, "[synchronizer] secret version already removed in engine",
+						slog.String("secret.path", secret.Path),
+						slog.String("secret.version_id", version.ID),
+					)
+
+					continue
+				}
+
 				return fmt.Errorf("remove secret %q version %q: %w", secret.Path, version.ID, err)
 			}
 

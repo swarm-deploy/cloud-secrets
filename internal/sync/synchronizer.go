@@ -127,8 +127,9 @@ func (s *Synchronizer) attachPipeline() {
 		})
 
 		s.pipeline.Add(gopipe.Step[*syncPayload]{
-			Name: stepCleanupOrphanedSecrets,
-			Run:  s.cleanupOrphanedSecrets,
+			Name:            stepCleanupOrphanedSecrets,
+			Run:             s.cleanupOrphanedSecrets,
+			ContinueOnError: true,
 		})
 	}
 }
