@@ -41,7 +41,7 @@ func (s *Synchronizer) removeOldVersions(
 			err := s.engine.RemoveSecret(ctx, version.ID)
 			if err != nil {
 				if _, ok := errors.AsType[*engine.ErrSecretNotFound](err); ok {
-					slog.DebugContext(ctx, "[synchronizer] secret version already removed in engine",
+					slog.WarnContext(ctx, "[synchronizer] secret version already removed in engine",
 						slog.String("secret.path", secret.Path),
 						slog.String("secret.version_id", version.ID),
 					)
