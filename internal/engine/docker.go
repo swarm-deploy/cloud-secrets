@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/containerd/errdefs"
 	"github.com/moby/moby/api/types/swarm"
 	dock "github.com/moby/moby/client"
 	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
@@ -33,6 +34,10 @@ func (c *DockerClient) RemoveSecret(ctx context.Context, id string) error {
 
 	_, err := c.client.SecretRemove(ctx, id, dock.SecretRemoveOptions{})
 	if err != nil {
+		if errdefs.IsNotFound(err) {
+			return &SecretNotFoundError{ID: id}
+		}
+
 		return fmt.Errorf("remove secret in swarm: %w", err)
 	}
 

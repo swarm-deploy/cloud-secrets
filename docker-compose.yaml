@@ -18,7 +18,7 @@ services:
       - users-service-db-dsn
 
   cloud-secrets:
-    image: swarmdeployorg/cloud-secrets:v0.1.1
+    image: swarmdeployorg/cloud-secrets:v0.3.0
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     environment:
@@ -30,6 +30,7 @@ services:
       - CS_LOG_LEVEL=debug
       - CS_REFRESH_INTERVAL=1m
       - CS_SECRET_NAME_FOLDER_DELIMITER=-
+      - CS_CLEANUP_ORPHANED=true
     secrets:
       - iam_id
       - iam_secret

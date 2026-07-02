@@ -62,6 +62,7 @@ func NewApplication(ctx context.Context, cfg config.Config, metricsGroup *metric
 		engine.NewDockerClient(dockerClient, metricsGroup.Docker),
 		provider,
 		metricsGroup.Secrets,
+		cfg.CloudSecrets.CleanupOrphanedSecrets,
 		cfg.CloudSecrets.SecretNameFolderDelimiter,
 	)
 
@@ -99,6 +100,8 @@ func (app *Application) Run(ctx context.Context) error {
 
 		slog.Info("sync finished",
 			slog.Int("secrets_created", result.Created),
+			slog.Int("secrets_removed", result.RemovedSecrets),
+			slog.Int("secret_versions_removed", result.RemovedSecretVersions),
 			slog.Int("secrets_updated", result.Updated),
 			slog.Int("secrets_skipped", result.Skipped),
 		)

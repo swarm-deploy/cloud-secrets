@@ -16,6 +16,8 @@ type Config struct {
 	CloudSecrets struct {
 		RefreshInterval time.Duration `env:"REFRESH_INTERVAL" envDefault:"5m"`
 
+		CleanupOrphanedSecrets bool `env:"CLEANUP_ORPHANED"`
+
 		SecretNameFolderDelimiter secretname.FolderDelimiter `env:"SECRET_NAME_FOLDER_DELIMITER" envDefault:"-"`
 
 		Log struct {

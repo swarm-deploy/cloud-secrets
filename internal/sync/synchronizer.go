@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/artarts36/gopipe"
-	"github.com/moby/moby/api/types/swarm"
 	"github.com/swarm-deploy/cloud-secrets/internal/engine"
 	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
@@ -17,6 +16,7 @@ type Synchronizer struct {
 	engine          engine.Client
 	secretProvider  contracts.Provider
 	metrics         metrics.Secrets
+	cleanupOrphaned bool
 	folderDelimiter secretname.FolderDelimiter
 
 	pipeline *gopipe.Pipeline[*syncPayload]
@@ -26,12 +26,14 @@ func NewSynchronizer(
 	engine engine.Client,
 	secretProvider contracts.Provider,
 	secretsMetrics metrics.Secrets,
+	cleanupOrphaned bool,
 	folderDelimiter secretname.FolderDelimiter,
 ) *Synchronizer {
 	s := &Synchronizer{
 		engine:          engine,
 		secretProvider:  secretProvider,
 		metrics:         secretsMetrics,
+		cleanupOrphaned: cleanupOrphaned,
 		folderDelimiter: folderDelimiter,
 	}
 
@@ -41,47 +43,11 @@ func NewSynchronizer(
 }
 
 type Result struct {
-	Created int
-	Updated int
-	Skipped int
-}
-
-type syncPayload struct {
-	result Result
-
-	services        []swarm.Service
-	swarmSecretsMap map[string]*engine.ExistingSecret
-	externalSecrets map[string]contracts.Secret
-
-	pendingServiceUpdates     map[string]*ServiceTask
-	pendingServiceUpdateOrder []*ServiceTask
-	pendingVersionRemovals    []SecretVersionRemoval
-	pendingSecretRestores     []UpdatedSecret
-	pendingServiceOffset      int
-}
-
-type ServiceTask struct {
-	Service swarm.Service
-	Secrets map[string]updatingServiceSecret
-}
-
-type UpdatedSecret struct {
-	Path         string
-	Value        []byte
-	ExternalPath string
-
-	ExternalID string
-}
-
-type SecretVersionRemoval struct {
-	Secret       *engine.ExistingSecret
-	RemoveParent bool
-}
-
-type updatingServiceSecret struct {
-	Name string
-	ID   string
-	Path string
+	Created               int
+	RemovedSecrets        int
+	RemovedSecretVersions int
+	Updated               int
+	Skipped               int
 }
 
 func (s *Synchronizer) Sync(ctx context.Context) (Result, error) {
@@ -151,20 +117,19 @@ func (s *Synchronizer) attachPipeline() {
 		}),
 		Run: s.restorePendingSecrets,
 	})
-}
 
-func (p *syncPayload) hasPendingChanges() bool {
-	return p.hasPendingServiceUpdates() || p.hasPendingVersionRemovals() || p.hasPendingSecretRestores()
-}
+	if s.cleanupOrphaned {
+		s.pipeline.Add(gopipe.Step[*syncPayload]{
+			Name:       stepLoadSwarmState,
+			Run:        s.loadSwarmState,
+			Retries:    3,                     //nolint:mnd // it's look as const
+			RetryDelay: 50 * time.Millisecond, //nolint:mnd // it's look as const
+		})
 
-func (p *syncPayload) hasPendingServiceUpdates() bool {
-	return len(p.pendingServiceUpdates) > 0
-}
-
-func (p *syncPayload) hasPendingVersionRemovals() bool {
-	return len(p.pendingVersionRemovals) > 0
-}
-
-func (p *syncPayload) hasPendingSecretRestores() bool {
-	return len(p.pendingSecretRestores) > 0
+		s.pipeline.Add(gopipe.Step[*syncPayload]{
+			Name:            stepCleanupOrphanedSecrets,
+			Run:             s.cleanupOrphanedSecrets,
+			ContinueOnError: true,
+		})
+	}
 }

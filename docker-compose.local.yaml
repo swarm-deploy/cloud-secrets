@@ -10,14 +10,17 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     working_dir: /app
     command: go run ./cmd/cloud-secrets/main.go
+    env_file:
+      - .env
     environment:
-      - CLOUDRU_PROJECT_ID=<cloudru-project-id>
+#      - CLOUDRU_PROJECT_ID=<cloudru-project-id>
       - CLOUDRU_IAM_CLIENT_ID=/var/run/secrets/iam_id
       - CLOUDRU_IAM_CLIENT_SECRET=/var/run/secrets/iam_secret
       - CLOUDRU_ROOT_FOLDER=/infra
       - CLOUDRU_ROOT_FOLDER_OMIT_PREFIX=true
       - CS_LOG_LEVEL=debug
       - CS_REFRESH_INTERVAL=12s
+      - CS_CLEANUP_ORPHANED=true
       - CS_SECRET_NAME_FOLDER_DELIMITER=-
     secrets:
       - iam_id

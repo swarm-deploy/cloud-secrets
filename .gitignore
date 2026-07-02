@@ -1,3 +1,4 @@
 /vendor
 iam_id
 iam_secret
+.env
