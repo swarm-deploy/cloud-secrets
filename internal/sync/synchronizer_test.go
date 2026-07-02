@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/moby/moby/api/types/swarm"
@@ -108,6 +109,89 @@ func TestSynchronizer_Sync(t *testing.T) {
 				}).Return(nil)
 			},
 			want: Result{Updated: 1, RemovedSecrets: 1, RemovedSecretVersions: 1},
+		},
+
+		{
+			name: "update secret version preserves custom secret mount settings",
+			setup: func(engineClient *engine.MockClient, provider *contracts.MockProvider) {
+				existingSecret := engine.ExistingSecret{
+					ID:           "parent-secret-id",
+					Path:         "users-service-db-dsn",
+					ExternalPath: "users/service/db/dsn",
+					Managed:      true,
+					Versions: []engine.ExistingSecretVersion{
+						{ID: "parent-secret-id", ExternalID: "version-1"},
+					},
+				}
+
+				originalRef := newCustomSecretRef(
+					"/app/config/db-password",
+					"1000",
+					"1000",
+					0400,
+					"users-service-db-dsn",
+					"parent-secret-id",
+				)
+				updatedRef := newCustomSecretRef(
+					"/app/config/db-password",
+					"1000",
+					"1000",
+					0400,
+					"users-service-db-dsn-version-2",
+					"new-version-secret-id",
+				)
+
+				engineClient.EXPECT().ListServices(gomock.Any()).Return([]swarm.Service{
+					newService("service-id", "api", originalRef),
+				}, nil)
+				engineClient.EXPECT().MapSecrets(gomock.Any()).Return(map[string]*engine.ExistingSecret{
+					"users-service-db-dsn": &existingSecret,
+				}, nil)
+				provider.EXPECT().ListSecrets(gomock.Any()).Return(map[string]contracts.Secret{
+					"users/service/db/dsn": {Path: "users/service/db/dsn", FullPath: "users/service/db/dsn", VersionID: "version-2"},
+				}, nil)
+				provider.EXPECT().GetSecretPayload(gomock.Any(), "users/service/db/dsn").Return([]byte("payload-2"), nil)
+				engineClient.EXPECT().CreateSecretVersion(gomock.Any(), existingSecret, engine.CreatingSecretVersion{
+					Path: "users-service-db-dsn-version-2", ExternalID: "version-2", Value: []byte("payload-2"),
+				}).Return(engine.CreatedSecretVersion{ID: "new-version-secret-id", Name: "users-service-db-dsn-version-2"}, nil)
+				engineClient.EXPECT().UpdateService(gomock.Any(), newService("service-id", "api", updatedRef)).Return(nil)
+				engineClient.EXPECT().RemoveSecret(gomock.Any(), "parent-secret-id").Return(nil)
+				engineClient.EXPECT().CreateSecret(gomock.Any(), engine.CreatingSecret{
+					Path: "users-service-db-dsn", Value: []byte("payload-2"), ExternalPath: "users/service/db/dsn", ExternalVersionID: "version-2",
+				}).Return(nil)
+			},
+			want: Result{Updated: 1, RemovedSecrets: 1},
+		},
+		{
+			name: "restore parent secret preserves custom secret mount settings",
+			setup: func(engineClient *engine.MockClient, provider *contracts.MockProvider) {
+				existingSecret := engine.ExistingSecret{
+					ID:           "parent-secret-id",
+					Path:         "users-service-db-dsn",
+					ExternalPath: "users/service/db/dsn",
+					Managed:      true,
+					Versions: []engine.ExistingSecretVersion{
+						{ID: "parent-secret-id", ExternalID: "version-2"},
+						{ID: "old-version-secret-id", ExternalID: "version-1"},
+					},
+				}
+
+				originalRef := newCustomSecretRef("/app/config/db-password", "1000", "1000", 0400, "users-service-db-dsn-version-1", "old-version-secret-id")
+				updatedRef := newCustomSecretRef("/app/config/db-password", "1000", "1000", 0400, "users-service-db-dsn", "parent-secret-id")
+
+				engineClient.EXPECT().ListServices(gomock.Any()).Return([]swarm.Service{
+					newService("service-id", "api", originalRef),
+				}, nil)
+				engineClient.EXPECT().MapSecrets(gomock.Any()).Return(map[string]*engine.ExistingSecret{
+					"users-service-db-dsn": &existingSecret,
+				}, nil)
+				provider.EXPECT().ListSecrets(gomock.Any()).Return(map[string]contracts.Secret{
+					"users/service/db/dsn": {Path: "users/service/db/dsn", FullPath: "users/service/db/dsn", VersionID: "version-2"},
+				}, nil)
+				engineClient.EXPECT().UpdateService(gomock.Any(), newService("service-id", "api", updatedRef)).Return(nil)
+				engineClient.EXPECT().RemoveSecret(gomock.Any(), "old-version-secret-id").Return(nil)
+			},
+			want: Result{Skipped: 1, RemovedSecretVersions: 1},
 		},
 		{
 			name: "remove old versions for managed secret on same version",
@@ -499,6 +583,19 @@ func newService(id string, name string, secrets ...*swarm.SecretReference) swarm
 				},
 			},
 		},
+	}
+}
+
+func newCustomSecretRef(fileName string, uid string, gid string, mode os.FileMode, secretName string, id string) *swarm.SecretReference {
+	return &swarm.SecretReference{
+		File: &swarm.SecretReferenceFileTarget{
+			Name: fileName,
+			UID:  uid,
+			GID:  gid,
+			Mode: mode,
+		},
+		SecretName: secretName,
+		SecretID:   id,
 	}
 }
 
