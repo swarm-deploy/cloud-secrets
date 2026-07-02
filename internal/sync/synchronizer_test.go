@@ -237,10 +237,12 @@ func TestSynchronizer_Sync_CleanupOrphanedManagedSecrets(t *testing.T) {
 		Managed: true,
 		Versions: []engine.ExistingSecretVersion{
 			{
-				ID: "parent-secret-id",
+				ID:         "parent-secret-id",
+				ExternalID: "version-2",
 			},
 			{
-				ID: "old-version-secret-id",
+				ID:         "old-version-secret-id",
+				ExternalID: "version-1",
 			},
 		},
 	}
@@ -282,10 +284,12 @@ func TestSynchronizer_Sync_KeepManagedSecretUsedByServiceID(t *testing.T) {
 		Managed: true,
 		Versions: []engine.ExistingSecretVersion{
 			{
-				ID: "parent-secret-id",
+				ID:         "parent-secret-id",
+				ExternalID: "version-2",
 			},
 			{
-				ID: "old-version-secret-id",
+				ID:         "old-version-secret-id",
+				ExternalID: "version-1",
 			},
 		},
 	}
@@ -320,6 +324,58 @@ func TestSynchronizer_Sync_KeepManagedSecretUsedByServiceID(t *testing.T) {
 	}
 
 	assert.Equal(t, Result{}, got)
+}
+
+func TestSynchronizer_Sync_KeepManagedSecretPresentInExternalSource(t *testing.T) {
+	t.Parallel()
+
+	existingSecret := engine.ExistingSecret{
+		ID:      "parent-secret-id",
+		Path:    "prod-db-password",
+		Managed: true,
+		Versions: []engine.ExistingSecretVersion{
+			{
+				ID:         "parent-secret-id",
+				ExternalID: "version-2",
+			},
+			{
+				ID:         "old-version-secret-id",
+				ExternalID: "version-1",
+			},
+		},
+	}
+
+	ctrl := gomock.NewController(t)
+	engineClient := engine.NewMockClient(ctrl)
+	provider := contracts.NewMockProvider(ctrl)
+
+	engineClient.EXPECT().ListServices(gomock.Any()).Return([]swarm.Service{}, nil).Times(2)
+	engineClient.EXPECT().MapSecrets(gomock.Any()).Return(map[string]*engine.ExistingSecret{
+		"prod-db-password": &existingSecret,
+	}, nil).Times(2)
+	provider.EXPECT().ListSecrets(gomock.Any()).Return(map[string]contracts.Secret{
+		"prod/db/password": {
+			Path:      "prod/db/password",
+			FullPath:  "prod/db/password",
+			VersionID: "version-2",
+		},
+	}, nil)
+	engineClient.EXPECT().RemoveSecret(gomock.Any(), "old-version-secret-id").Return(nil)
+
+	synchronizer := NewSynchronizer(
+		engineClient,
+		provider,
+		metrics.NewGroup(metrics.CreateGroupParams{Namespace: "test"}).Secrets,
+		true,
+		secretname.FolderDelimiter('-'),
+	)
+
+	got, err := synchronizer.Sync(context.Background())
+	if !assert.NoError(t, err) {
+		return
+	}
+
+	assert.Equal(t, Result{Skipped: 1}, got)
 }
 
 func TestSynchronizer_Sync_SkipUnmanagedOrphanedSecretCleanup(t *testing.T) {

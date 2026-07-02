@@ -22,7 +22,7 @@ services:
       - CLOUDRU_IAM_CLIENT_SECRET=/var/run/secrets/iam_secret
       - CLOUDRU_ROOT_FOLDER=""
       - CLOUDRU_ROOT_FOLDER_OMIT_PREFIX=false
-      - CS_CLEANUP_ORPHANED=true
+      - CS_CLEANUP_ORPHANED=true`
     secrets:
       - iam_id
       - iam_secret

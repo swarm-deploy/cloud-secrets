@@ -9,7 +9,7 @@ import (
 const stepCleanupOrphanedSecrets = "cleanup_orphaned_secrets"
 
 func (s *Synchronizer) cleanupOrphanedSecrets(ctx context.Context, payload *syncPayload) error {
-	removals := payload.orphanedManagedSecretRemovals()
+	removals := payload.orphanedManagedSecretRemovals(s.folderDelimiter)
 	if len(removals) == 0 {
 		return nil
 	}

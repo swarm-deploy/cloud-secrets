@@ -118,8 +118,10 @@ func (s *Synchronizer) attachPipeline() {
 
 	if s.cleanupOrphaned {
 		s.pipeline.Add(gopipe.Step[*syncPayload]{
-			Name: stepLoadSwarmState,
-			Run:  s.loadSwarmState,
+			Name:       stepLoadSwarmState,
+			Run:        s.loadSwarmState,
+			Retries:    3,                     //nolint:mnd // it's look as const
+			RetryDelay: 50 * time.Millisecond, //nolint:mnd // it's look as const
 		})
 
 		s.pipeline.Add(gopipe.Step[*syncPayload]{

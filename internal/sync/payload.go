@@ -1,9 +1,12 @@
 package sync
 
 import (
+	"strings"
+
 	"github.com/moby/moby/api/types/swarm"
 	"github.com/swarm-deploy/cloud-secrets/internal/engine"
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
+	"github.com/swarm-deploy/cloud-secrets/internal/secretname"
 )
 
 type syncPayload struct {
@@ -60,8 +63,11 @@ func (p *syncPayload) hasPendingSecretRestores() bool {
 	return len(p.pendingSecretRestores) > 0
 }
 
-func (p *syncPayload) orphanedManagedSecretRemovals() []SecretVersionRemoval {
+func (p *syncPayload) orphanedManagedSecretRemovals(
+	folderDelimiter secretname.FolderDelimiter,
+) []SecretVersionRemoval {
 	usedSecretPaths := p.usedSecretPaths()
+	existingExternalSecretPaths := p.externalSecretPaths(folderDelimiter)
 	removals := make([]SecretVersionRemoval, 0)
 
 	for path, secret := range p.swarmSecretsMap {
@@ -70,6 +76,10 @@ func (p *syncPayload) orphanedManagedSecretRemovals() []SecretVersionRemoval {
 		}
 
 		if _, ok := usedSecretPaths[path]; ok {
+			continue
+		}
+
+		if _, ok := existingExternalSecretPaths[path]; ok {
 			continue
 		}
 
@@ -115,4 +125,16 @@ func (p *syncPayload) secretPathByID() map[string]string {
 	}
 
 	return pathBySecretID
+}
+
+func (p *syncPayload) externalSecretPaths(
+	folderDelimiter secretname.FolderDelimiter,
+) map[string]struct{} {
+	paths := make(map[string]struct{})
+
+	for _, secret := range p.externalSecrets {
+		paths[strings.ReplaceAll(secret.Path, "/", string(folderDelimiter))] = struct{}{}
+	}
+
+	return paths
 }
