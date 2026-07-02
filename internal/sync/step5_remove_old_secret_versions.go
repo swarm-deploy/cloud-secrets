@@ -40,8 +40,14 @@ func (s *Synchronizer) removeOldVersions(
 				return fmt.Errorf("remove secret %q version %q: %w", secret.Path, version.ID, err)
 			}
 
-			result.Removed++
-			s.metrics.IncRemoved()
+			if version.ID == secret.ID {
+				result.RemovedSecrets++
+				s.metrics.IncRemovedSecrets()
+				continue
+			}
+
+			result.RemovedSecretVersions++
+			s.metrics.IncRemovedVersions()
 		}
 	}
 

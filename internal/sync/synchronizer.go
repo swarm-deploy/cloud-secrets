@@ -43,10 +43,11 @@ func NewSynchronizer(
 }
 
 type Result struct {
-	Created int
-	Removed int
-	Updated int
-	Skipped int
+	Created               int
+	RemovedSecrets        int
+	RemovedSecretVersions int
+	Updated               int
+	Skipped               int
 }
 
 func (s *Synchronizer) Sync(ctx context.Context) (Result, error) {

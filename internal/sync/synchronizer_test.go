@@ -107,7 +107,7 @@ func TestSynchronizer_Sync(t *testing.T) {
 					ExternalVersionID: "version-2",
 				}).Return(nil)
 			},
-			want: Result{Updated: 1, Removed: 2},
+			want: Result{Updated: 1, RemovedSecrets: 1, RemovedSecretVersions: 1},
 		},
 		{
 			name: "remove old versions for managed secret on same version",
@@ -153,7 +153,7 @@ func TestSynchronizer_Sync(t *testing.T) {
 				)).Return(nil)
 				engineClient.EXPECT().RemoveSecret(gomock.Any(), "old-version-secret-id").Return(nil)
 			},
-			want: Result{Skipped: 1, Removed: 1},
+			want: Result{Skipped: 1, RemovedSecretVersions: 1},
 		},
 		{
 			name: "keep old versions for unmanaged secret on same version",
@@ -272,7 +272,7 @@ func TestSynchronizer_Sync_CleanupOrphanedManagedSecrets(t *testing.T) {
 		return
 	}
 
-	assert.Equal(t, Result{Removed: 2}, got)
+	assert.Equal(t, Result{RemovedSecrets: 1, RemovedSecretVersions: 1}, got)
 }
 
 func TestSynchronizer_Sync_KeepManagedSecretUsedByServiceID(t *testing.T) {
@@ -375,7 +375,7 @@ func TestSynchronizer_Sync_KeepManagedSecretPresentInExternalSource(t *testing.T
 		return
 	}
 
-	assert.Equal(t, Result{Skipped: 1, Removed: 1}, got)
+	assert.Equal(t, Result{Skipped: 1, RemovedSecretVersions: 1}, got)
 }
 
 func TestSynchronizer_Sync_SkipUnmanagedOrphanedSecretCleanup(t *testing.T) {
