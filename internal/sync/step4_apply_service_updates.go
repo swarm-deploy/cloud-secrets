@@ -6,7 +6,6 @@ import (
 	"log/slog"
 
 	"github.com/moby/moby/api/types/swarm"
-	"github.com/swarm-deploy/cloud-secrets/internal/engine"
 )
 
 const stepApplyServices = "apply_service_updates"
@@ -21,15 +20,18 @@ func (s *Synchronizer) applyServiceUpdates(ctx context.Context, payload *syncPay
 	}
 
 	for _, service := range payload.pendingServiceUpdateOrder[payload.pendingServiceOffset:] {
-		secrets := []*swarm.SecretReference{}
+		secrets := make([]*swarm.SecretReference, 0, len(service.Service.Spec.TaskTemplate.ContainerSpec.Secrets))
 		for _, secRef := range service.Service.Spec.TaskTemplate.ContainerSpec.Secrets {
-			if _, ok := service.Secrets[secRef.File.Name]; !ok {
+			secret, ok := service.Secrets[secRef.SecretID]
+			if !ok {
 				secrets = append(secrets, secRef)
+				continue
 			}
-		}
 
-		for _, secret := range service.Secrets {
-			secrets = append(secrets, engine.NewSecretRef(secret.Path, secret.Name, secret.ID))
+			updatedRef := *secRef
+			updatedRef.SecretID = secret.ID
+			updatedRef.SecretName = secret.Name
+			secrets = append(secrets, &updatedRef)
 		}
 
 		service.Service.Spec.TaskTemplate.ContainerSpec.Secrets = secrets

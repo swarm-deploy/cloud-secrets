@@ -44,7 +44,6 @@ type SecretVersionRemoval struct {
 type updatingServiceSecret struct {
 	Name string
 	ID   string
-	Path string
 }
 
 func (p *syncPayload) hasPendingChanges() bool {

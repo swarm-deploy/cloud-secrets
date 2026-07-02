@@ -116,7 +116,7 @@ func (s *Synchronizer) createUpdatedSecretVersion(
 		payload.pendingServiceUpdates,
 		&payload.pendingServiceUpdateOrder,
 		payload.services,
-		swarmSecret.Path,
+		swarmSecret,
 		createdVersion,
 	)
 	payload.pendingSecretRestores = append(payload.pendingSecretRestores, UpdatedSecret{
@@ -156,7 +156,7 @@ func (s *Synchronizer) enqueueSameVersionServices(
 ) {
 	for _, service := range services {
 		for _, ref := range service.Spec.TaskTemplate.ContainerSpec.Secrets {
-			if ref.File.Name != swarmSecret.Path || ref.SecretID == swarmSecret.ID {
+			if !secretReferenceUsesManagedSecret(ref, swarmSecret) || ref.SecretID == swarmSecret.ID {
 				continue
 			}
 
@@ -171,10 +171,9 @@ func (s *Synchronizer) enqueueSameVersionServices(
 				*pendingServiceUpdateOrder = append(*pendingServiceUpdateOrder, task)
 			}
 
-			task.Secrets[swarmSecret.Path] = updatingServiceSecret{
+			task.Secrets[ref.SecretID] = updatingServiceSecret{
 				Name: swarmSecret.Path,
 				ID:   swarmSecret.ID,
-				Path: swarmSecret.Path,
 			}
 		}
 	}
@@ -184,41 +183,50 @@ func (s *Synchronizer) enqueueUpdatedServices(
 	pendingServiceUpdates map[string]*ServiceTask,
 	pendingServiceUpdateOrder *[]*ServiceTask,
 	services []swarm.Service,
-	path string,
+	swarmSecret *engine.ExistingSecret,
 	secret engine.CreatedSecretVersion,
 ) {
 	for _, service := range services {
-		if !serviceUsesPath(service, path) {
-			continue
-		}
-
-		task, ok := pendingServiceUpdates[service.ID]
-		if !ok {
-			task = &ServiceTask{
-				Service: service,
-				Secrets: make(map[string]updatingServiceSecret),
+		task := pendingServiceUpdates[service.ID]
+		for _, ref := range service.Spec.TaskTemplate.ContainerSpec.Secrets {
+			if !secretReferenceUsesManagedSecret(ref, swarmSecret) {
+				continue
 			}
 
-			pendingServiceUpdates[service.ID] = task
-			*pendingServiceUpdateOrder = append(*pendingServiceUpdateOrder, task)
-		}
+			if task == nil {
+				task = &ServiceTask{
+					Service: service,
+					Secrets: make(map[string]updatingServiceSecret),
+				}
 
-		task.Secrets[path] = updatingServiceSecret{
-			Name: secret.Name,
-			ID:   secret.ID,
-			Path: path,
+				pendingServiceUpdates[service.ID] = task
+				*pendingServiceUpdateOrder = append(*pendingServiceUpdateOrder, task)
+			}
+
+			task.Secrets[ref.SecretID] = updatingServiceSecret{
+				Name: secret.Name,
+				ID:   secret.ID,
+			}
 		}
 	}
 }
 
-func serviceUsesPath(service swarm.Service, path string) bool {
-	for _, ref := range service.Spec.TaskTemplate.ContainerSpec.Secrets {
-		if ref.File.Name == path {
+func secretReferenceUsesManagedSecret(ref *swarm.SecretReference, secret *engine.ExistingSecret) bool {
+	if secretReferenceUsesManagedSecretPath(ref, secret.Path) {
+		return true
+	}
+
+	for _, version := range secret.Versions {
+		if ref.SecretID == version.ID {
 			return true
 		}
 	}
 
 	return false
+}
+
+func secretReferenceUsesManagedSecretPath(ref *swarm.SecretReference, path string) bool {
+	return ref.SecretName == path
 }
 
 func (s *Synchronizer) prepareSecretPath(path string) string {
