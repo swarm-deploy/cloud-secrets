@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -14,6 +15,7 @@ import (
 
 	"github.com/swarm-deploy/cloud-secrets/internal/application"
 	"github.com/swarm-deploy/cloud-secrets/internal/config"
+	"github.com/swarm-deploy/cloud-secrets/internal/grpcx"
 	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
 )
 
@@ -57,6 +59,8 @@ func main() {
 		slog.Error("[main] failed to register gopipe metrics", slog.Any("err", err))
 		os.Exit(1)
 	}
+
+	grpcx.SetUserAgent(fmt.Sprintf("cloud-secrets/v%s", Version))
 
 	metricsGroup.BuildInfo.Set(Version, BuildDate)
 
