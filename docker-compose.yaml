@@ -29,7 +29,6 @@ services:
  #     - CLOUDRU_ROOT_FOLDER_OMIT_PREFIX=false
       - CS_LOG_LEVEL=debug
       - CS_REFRESH_INTERVAL=1m
-      - CS_CLEANUP_ORPHANED=false
       - CS_SECRET_NAME_FOLDER_DELIMITER=-
       - CS_CLEANUP_ORPHANED=true
     secrets:
