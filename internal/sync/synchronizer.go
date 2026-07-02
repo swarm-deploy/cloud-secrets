@@ -44,6 +44,7 @@ func NewSynchronizer(
 
 type Result struct {
 	Created int
+	Removed int
 	Updated int
 	Skipped int
 }

@@ -100,6 +100,7 @@ func (app *Application) Run(ctx context.Context) error {
 
 		slog.Info("sync finished",
 			slog.Int("secrets_created", result.Created),
+			slog.Int("secrets_removed", result.Removed),
 			slog.Int("secrets_updated", result.Updated),
 			slog.Int("secrets_skipped", result.Skipped),
 		)

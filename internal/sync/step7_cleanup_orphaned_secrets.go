@@ -21,7 +21,7 @@ func (s *Synchronizer) cleanupOrphanedSecrets(ctx context.Context, payload *sync
 		)
 	}
 
-	err := s.removeOldVersions(ctx, removals)
+	err := s.removeOldVersions(ctx, &payload.result, removals)
 	if err != nil {
 		return fmt.Errorf("cleanup orphaned secrets: %w", err)
 	}

@@ -9,10 +9,14 @@ import (
 const stepRemoveOldVersions = "remove_old_secret_versions"
 
 func (s *Synchronizer) removePendingOldVersions(ctx context.Context, payload *syncPayload) error {
-	return s.removeOldVersions(ctx, payload.pendingVersionRemovals)
+	return s.removeOldVersions(ctx, &payload.result, payload.pendingVersionRemovals)
 }
 
-func (s *Synchronizer) removeOldVersions(ctx context.Context, removals []SecretVersionRemoval) error {
+func (s *Synchronizer) removeOldVersions(
+	ctx context.Context,
+	result *Result,
+	removals []SecretVersionRemoval,
+) error {
 	for _, removal := range removals {
 		secret := removal.Secret
 		slog.DebugContext(ctx, "[synchronizer] removing old secret versions in engine",
@@ -35,6 +39,9 @@ func (s *Synchronizer) removeOldVersions(ctx context.Context, removals []SecretV
 			if err != nil {
 				return fmt.Errorf("remove secret %q version %q: %w", secret.Path, version.ID, err)
 			}
+
+			result.Removed++
+			s.metrics.IncRemoved()
 		}
 	}
 
