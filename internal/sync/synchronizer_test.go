@@ -467,7 +467,7 @@ func TestSynchronizer_Sync_SkipNotFoundOnRemoveSecret(t *testing.T) {
 		engine.NewSecretRef("prod-db-password", "prod-db-password", "parent-secret-id"),
 	)).Return(nil)
 	engineClient.EXPECT().RemoveSecret(gomock.Any(), "old-version-secret-id").Return(
-		&engine.ErrSecretNotFound{ID: "old-version-secret-id"},
+		&engine.SecretNotFoundError{ID: "old-version-secret-id"},
 	)
 
 	synchronizer := NewSynchronizer(

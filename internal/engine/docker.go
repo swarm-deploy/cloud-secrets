@@ -35,7 +35,7 @@ func (c *DockerClient) RemoveSecret(ctx context.Context, id string) error {
 	_, err := c.client.SecretRemove(ctx, id, dock.SecretRemoveOptions{})
 	if err != nil {
 		if errdefs.IsNotFound(err) {
-			return &ErrSecretNotFound{ID: id}
+			return &SecretNotFoundError{ID: id}
 		}
 
 		return fmt.Errorf("remove secret in swarm: %w", err)

@@ -2,10 +2,10 @@ package engine
 
 import "fmt"
 
-type ErrSecretNotFound struct {
+type SecretNotFoundError struct {
 	ID string
 }
 
-func (e *ErrSecretNotFound) Error() string {
+func (e *SecretNotFoundError) Error() string {
 	return fmt.Sprintf("secret %q not found", e.ID)
 }

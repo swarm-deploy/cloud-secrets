@@ -19,7 +19,7 @@ type Client interface {
 	UpdateService(ctx context.Context, service swarm.Service) error
 
 	// RemoveSecret removes a Swarm secret by ID.
-	// Throws ErrSecretNotFound
+	// Throws SecretNotFoundError
 	RemoveSecret(ctx context.Context, id string) error
 	// CreateSecret creates a logical Swarm secret.
 	CreateSecret(ctx context.Context, spec CreatingSecret) error
