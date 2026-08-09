@@ -163,6 +163,76 @@ func TestSynchronizer_Sync(t *testing.T) {
 			want: Result{Updated: 1, RemovedSecrets: 1},
 		},
 		{
+			name: "update secret version preserves duplicate secret references",
+			setup: func(engineClient *engine.MockClient, provider *contracts.MockProvider) {
+				existingSecret := engine.ExistingSecret{
+					ID:           "test-secret-id",
+					Path:         "test",
+					ExternalPath: "test",
+					Managed:      true,
+					Versions: []engine.ExistingSecretVersion{
+						{ID: "test-secret-id", ExternalID: "version-1"},
+					},
+				}
+
+				originalRefA := newCustomSecretRef(
+					"/run/secrets/a",
+					"1000",
+					"1000",
+					0400,
+					"test",
+					"test-secret-id",
+				)
+				originalRefB := newCustomSecretRef(
+					"/run/secrets/b",
+					"2000",
+					"3000",
+					0440,
+					"test",
+					"test-secret-id",
+				)
+				updatedRefA := newCustomSecretRef(
+					"/run/secrets/a",
+					"1000",
+					"1000",
+					0400,
+					"test-version-2",
+					"new-version-secret-id",
+				)
+				updatedRefB := newCustomSecretRef(
+					"/run/secrets/b",
+					"2000",
+					"3000",
+					0440,
+					"test-version-2",
+					"new-version-secret-id",
+				)
+
+				engineClient.EXPECT().ListServices(gomock.Any()).Return([]swarm.Service{
+					newService("service-id", "api", originalRefA, originalRefB),
+				}, nil)
+				engineClient.EXPECT().MapSecrets(gomock.Any()).Return(map[string]*engine.ExistingSecret{
+					"test": &existingSecret,
+				}, nil)
+				provider.EXPECT().ListSecrets(gomock.Any()).Return(map[string]contracts.Secret{
+					"test": {Path: "test", FullPath: "test", VersionID: "version-2"},
+				}, nil)
+				provider.EXPECT().GetSecretPayload(gomock.Any(), "test").Return([]byte("payload-2"), nil)
+				engineClient.EXPECT().CreateSecretVersion(gomock.Any(), existingSecret, engine.CreatingSecretVersion{
+					Path: "test-version-2", ExternalID: "version-2", Value: []byte("payload-2"),
+				}).Return(engine.CreatedSecretVersion{ID: "new-version-secret-id", Name: "test-version-2"}, nil)
+				engineClient.EXPECT().UpdateService(
+					gomock.Any(),
+					newService("service-id", "api", updatedRefA, updatedRefB),
+				).Return(nil)
+				engineClient.EXPECT().RemoveSecret(gomock.Any(), "test-secret-id").Return(nil)
+				engineClient.EXPECT().CreateSecret(gomock.Any(), engine.CreatingSecret{
+					Path: "test", Value: []byte("payload-2"), ExternalPath: "test", ExternalVersionID: "version-2",
+				}).Return(nil)
+			},
+			want: Result{Updated: 1, RemovedSecrets: 1},
+		},
+		{
 			name: "restore parent secret preserves custom secret mount settings",
 			setup: func(engineClient *engine.MockClient, provider *contracts.MockProvider) {
 				existingSecret := engine.ExistingSecret{
