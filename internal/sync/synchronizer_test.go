@@ -586,7 +586,14 @@ func newService(id string, name string, secrets ...*swarm.SecretReference) swarm
 	}
 }
 
-func newCustomSecretRef(fileName string, uid string, gid string, mode os.FileMode, secretName string, id string) *swarm.SecretReference {
+func newCustomSecretRef(
+	fileName string,
+	uid string,
+	gid string,
+	mode os.FileMode,
+	secretName string,
+	id string,
+) *swarm.SecretReference {
 	return &swarm.SecretReference{
 		File: &swarm.SecretReferenceFileTarget{
 			Name: fileName,
