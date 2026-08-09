@@ -20,7 +20,7 @@ import (
 )
 
 var (
-	Version   = "0.1.0"
+	Version   = "v0.1.0"
 	BuildDate = "2026-04-22 20:46:00"
 )
 
@@ -60,7 +60,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	grpcx.SetUserAgent(fmt.Sprintf("cloud-secrets/v%s", Version))
+	grpcx.SetUserAgent(fmt.Sprintf("cloud-secrets/%s", Version))
 
 	metricsGroup.BuildInfo.Set(Version, BuildDate)
 
