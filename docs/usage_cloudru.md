@@ -10,14 +10,20 @@ version: '3.8'
 
 services:
   cloud-secrets:
-    image: swarmdeployorg/cloud-secrets:v0.1.0
+    image: swarmdeployorg/cloud-secrets:v0.3.0
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     environment:
       - CS_REFRESH_INTERVAL=10s
+      - CS_SECRET_NAME_FOLDER_DELIMITER=-
       - CLOUDRU_PROJECT_ID=<uuid>
       - CLOUDRU_IAM_CLIENT_ID=/var/run/secrets/iam_id
       - CLOUDRU_IAM_CLIENT_SECRET=/var/run/secrets/iam_secret
+      - CLOUDRU_ROOT_FOLDER=""
+      - CLOUDRU_ROOT_FOLDER_OMIT_PREFIX=false
+      # Удаляет только managed secrets, которых больше нет в Cloud.ru
+      # и которые не используются ни одним сервисом.
+      - CS_CLEANUP_ORPHANED=true
     secrets:
       - iam_id
       - iam_secret
@@ -39,6 +45,11 @@ secrets:
 &raquo; &nbsp;1. Скопировать файл `docker-compose.yaml`
 
 &raquo; &nbsp;2. Заполнить ID проекта в переменной `CLOUDRU_PROJECT_ID`.
+
+Опционально можно ограничить синхронизацию одной папкой и ее дочерними папками:
+
+- `CLOUDRU_ROOT_FOLDER=prod/apps` ограничивает поиск секретов указанной папкой.
+- `CLOUDRU_ROOT_FOLDER_OMIT_PREFIX=true` убирает префикс `prod/apps/` из имен секретов в Docker Swarm.
 
 <details>
   <summary>3. Создать сервисный аккаунт с доступом к сервису Secret Manager и ролью scsm.user</summary>

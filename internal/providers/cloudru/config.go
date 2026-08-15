@@ -1,13 +1,24 @@
 package cloudru
 
-import "errors"
+import (
+	"errors"
+	"strings"
+)
+
+type RootFolder string
+
+func (f *RootFolder) UnmarshalText(text []byte) error {
+	*f = RootFolder(strings.Trim(string(text), "/"))
+
+	return nil
+}
 
 type Config struct {
 	IAM struct {
 		Address string `env:"ADDRESS"`
 
-		ClientID     string `env:"CLIENT_ID,file"`
-		ClientSecret string `env:"CLIENT_SECRET,file" json:"-"`
+		ClientID     string `env:"CLIENT_ID,file,required,notEmpty"`
+		ClientSecret string `env:"CLIENT_SECRET,file,required,notEmpty" json:"-"`
 	} `envPrefix:"IAM_"`
 	CSM struct {
 		Address string `env:"ADDRESS"`
@@ -15,20 +26,15 @@ type Config struct {
 
 	DiscoveryURL string `env:"DISCOVERY_URL"`
 
-	ProjectID string `env:"PROJECT_ID"`
+	ProjectID string `env:"PROJECT_ID,required"`
+
+	RootFolder           RootFolder `env:"ROOT_FOLDER"`
+	RootFolderOmitPrefix bool       `env:"ROOT_FOLDER_OMIT_PREFIX"`
 }
 
-func (c *Config) Validate() error {
-	if c.ProjectID != "" {
-		return errors.New("CLOUDRU_PROJECT_ID is required")
-	}
-
-	if c.IAM.ClientID == "" {
-		return errors.New("CLOUDRU_IAM_CLIENT_ID is required")
-	}
-
-	if c.IAM.ClientSecret == "" {
-		return errors.New("CLOUDRU_IAM_CLIENT_SECRET is required")
+func (c Config) Validate() error {
+	if c.RootFolderOmitPrefix && c.RootFolder == "" {
+		return errors.New("CLOUDRU_ROOT_FOLDER must be set when CLOUDRU_ROOT_FOLDER_OMIT_PREFIX=true")
 	}
 
 	return nil

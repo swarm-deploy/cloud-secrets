@@ -25,6 +25,10 @@ func WithMetrics(provider Provider, metrics metrics.Provider) Provider {
 	}
 }
 
+func (d *metricsDecorator) Definition() ProviderDefinition {
+	return d.provider.Definition()
+}
+
 func (d *metricsDecorator) GetSecretPayload(ctx context.Context, key string) ([]byte, error) {
 	startedAt := time.Now()
 	defer func() {

@@ -10,6 +10,8 @@ import (
 	"time"
 
 	iamAuthV1 "github.com/cloudru-tech/iam-sdk/api/auth/v1"
+	"github.com/swarm-deploy/cloud-secrets/internal/grpcx"
+	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
 	"google.golang.org/grpc/credentials"
 
 	smssdk "github.com/cloudru-tech/secret-manager-sdk"
@@ -28,6 +30,10 @@ func NewProvider(ctx context.Context, cfg Config) (*Provider, error) {
 		cfg: cfg,
 	}
 
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+
 	slog.Info("[cloudru] resolving endpoints")
 
 	if err := p.resolveEndpoints(ctx); err != nil {
@@ -41,6 +47,12 @@ func NewProvider(ctx context.Context, cfg Config) (*Provider, error) {
 	}
 
 	return p, nil
+}
+
+func (p *Provider) Definition() contracts.ProviderDefinition {
+	return contracts.ProviderDefinition{
+		Name: "Cloud.ru Secret Manager",
+	}
 }
 
 func (p *Provider) resolveEndpoints(ctx context.Context) error {
@@ -90,9 +102,11 @@ const (
 )
 
 func (p *Provider) initSecretManagerClient() error {
-	iamConn, err := grpc.NewClient(p.cfg.IAM.Address, grpc.WithTransportCredentials(
-		credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS13}),
-	))
+	iamConn, err := grpc.NewClient(
+		p.cfg.IAM.Address,
+		grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{MinVersion: tls.VersionTLS13})),
+		grpcx.WithUserAgent(),
+	)
 	if err != nil {
 		return fmt.Errorf("create iam grpc client: %w", err)
 	}
@@ -111,7 +125,7 @@ func (p *Provider) initSecretManagerClient() error {
 			Timeout:             keepaliveTimeout,
 			PermitWithoutStream: false,
 		}),
-		grpc.WithUserAgent("docker-secret-volume"),
+		grpcx.WithUserAgent(),
 		grpc.WithUnaryInterceptor(interceptor.intercept()),
 	)
 	if err != nil {

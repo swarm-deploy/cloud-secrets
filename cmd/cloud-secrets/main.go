@@ -2,22 +2,25 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
 	"time"
 
 	"github.com/artarts36/go-entrypoint"
-	"github.com/caarlos0/env/v11"
+	gopipeprom "github.com/artarts36/gopipe/pkg/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/swarm-deploy/cloud-secrets/internal/application"
 	"github.com/swarm-deploy/cloud-secrets/internal/config"
+	"github.com/swarm-deploy/cloud-secrets/internal/grpcx"
 	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
 )
 
 var (
-	Version   = "0.1.0"
+	Version   = "v0.1.0"
 	BuildDate = "2026-04-22 20:46:00"
 )
 
@@ -30,8 +33,7 @@ func main() {
 
 	slog.Info("[main] parse config")
 
-	// parse with generics
-	cfg, err := env.ParseAs[config.Config]()
+	cfg, err := config.Load()
 	if err != nil {
 		slog.Error("[main] failed to parse config", slog.Any("err", err))
 		os.Exit(1)
@@ -58,9 +60,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = gopipeprom.Register(); err != nil {
+		slog.Error("[main] failed to register gopipe metrics", slog.Any("err", err))
+		os.Exit(1)
+	}
+
+	grpcx.SetUserAgent(fmt.Sprintf("cloud-secrets/%s", Version))
+
 	metricsGroup.BuildInfo.Set(Version, BuildDate)
 
-	app, err := application.NewApplication(initCtx, cfg, metricsGroup)
+	app, err := application.NewApplication(initCtx, *cfg, metricsGroup)
 	if err != nil {
 		slog.Error("[main] failed to create application", slog.Any("err", err))
 		os.Exit(1)
