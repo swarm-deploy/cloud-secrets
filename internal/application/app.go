@@ -56,7 +56,7 @@ func NewApplication(ctx context.Context, cfg config.Config, metricsGroup *metric
 		return nil, fmt.Errorf("create secret provider: %w", err)
 	}
 
-	app.secretProvider = contracts.WithMetrics(provider, metricsGroup.Provider)
+	app.secretProvider = provider
 
 	app.synchronizer = sync.NewSynchronizer(
 		engine.NewDockerClient(dockerClient, metricsGroup.Docker),

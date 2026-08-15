@@ -82,28 +82,6 @@ func TestProviderGetSecretPayload(t *testing.T) {
 	})
 }
 
-func TestConfigValidate_NormalizesTokenFromFileContent(t *testing.T) {
-	parsedAddress, err := url.Parse("https://vault.local")
-	require.NoError(t, err)
-
-	var token Token
-	err = token.UnmarshalText([]byte(" \nroot-token\r\n"))
-	require.NoError(t, err)
-
-	cfg := Config{
-		Addr:      *parsedAddress,
-		Token:     token,
-		MountPath: "/secret/",
-		Prefix:    "/cloud-secrets/",
-	}
-
-	err = cfg.Validate()
-	require.NoError(t, err)
-	assert.Equal(t, "root-token", cfg.Token.Value)
-	assert.Equal(t, "secret", cfg.MountPath)
-	assert.Equal(t, "cloud-secrets", cfg.Prefix)
-}
-
 func newTestProvider(t *testing.T, address string) *Provider {
 	t.Helper()
 

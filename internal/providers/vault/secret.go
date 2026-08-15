@@ -149,25 +149,12 @@ func (p *Provider) readSecretKeys(ctx context.Context, path string) ([]string, e
 }
 
 func (p *Provider) readSecretData(ctx context.Context, path string) (map[string]interface{}, error) {
-	secret, err := p.client.Logical().ReadWithContext(ctx, p.dataPath(path))
+	secret, err := p.kv.Get(ctx, path)
 	if err != nil {
 		return nil, fmt.Errorf("read secret %q: %w", path, err)
 	}
-	if secret == nil {
-		return nil, fmt.Errorf("secret %q not found", path)
-	}
 
-	rawData, ok := secret.Data["data"]
-	if !ok {
-		return nil, fmt.Errorf("secret %q has no data payload", path)
-	}
-
-	data, ok := rawData.(map[string]interface{})
-	if !ok {
-		return nil, fmt.Errorf("secret %q payload has unexpected type %T", path, rawData)
-	}
-
-	return data, nil
+	return secret.Data, nil
 }
 
 func toBytes(value interface{}) ([]byte, error) {
@@ -181,10 +168,6 @@ func toBytes(value interface{}) ([]byte, error) {
 	default:
 		return json.Marshal(value)
 	}
-}
-
-func (p *Provider) dataPath(secretPath string) string {
-	return p.apiPath("data", secretPath)
 }
 
 func (p *Provider) metadataPath(secretPath string) string {
