@@ -39,11 +39,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = cfg.Validate(); err != nil {
-		slog.Error("[main] failed to validate config", slog.Any("err", err))
-		os.Exit(1)
-	}
-
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
 		Level: cfg.CloudSecrets.Log.Level,
 	})))

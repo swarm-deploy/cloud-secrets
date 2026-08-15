@@ -20,14 +20,14 @@ func Create(
 
 	switch cfg.CloudSecrets.Provider {
 	case config.ProviderTypeCloudRU:
-		p, err := cloudru.NewProvider(ctx, cfg.CloudRu)
+		p, err := cloudru.NewProvider(ctx, *cfg.CloudRu)
 		if err != nil {
 			return nil, err
 		}
 
 		provider = p
 	case config.ProviderTypeVault:
-		p, err := vault.NewProvider(cfg.Vault)
+		p, err := vault.NewProvider(*cfg.Vault)
 		if err != nil {
 			return nil, err
 		}

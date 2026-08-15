@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   example-app:
-    image: golang:1.26.1-alpine
+    image: golang:1.26.2-alpine
     ports:
       - target: 8080
         published: 8085
@@ -14,8 +14,8 @@ services:
     command: go run ./examples/go-app/main.go
     environment:
       - MY_SECRET=/var/run/secrets/cloud-secrets-users-service-db-dsn-value
-    secrets:
-      - cloud-secrets-users-service-db-dsn-value
+#    secrets:
+#      - cloud-secrets-users-service-db-dsn-value
 
   vault:
     image: hashicorp/vault:1.18
@@ -48,7 +48,7 @@ services:
           - node.role == manager
 
   cloud-secrets:
-    image: golang:1.26.1-alpine
+    image: golang:1.26.2-alpine
     ports:
       - "8000:8000"
     volumes:
@@ -75,6 +75,6 @@ services:
 
 secrets:
   vault_token:
-    external: true
-  cloud-secrets-users-service-db-dsn-value:
-    external: true
+    file: ./vault_token
+#  cloud-secrets-users-service-db-dsn-value:
+#    external: true
