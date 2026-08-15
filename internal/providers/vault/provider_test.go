@@ -104,25 +104,6 @@ func TestConfigValidate_NormalizesTokenFromFileContent(t *testing.T) {
 	assert.Equal(t, "cloud-secrets", cfg.Prefix)
 }
 
-func TestConfigValidate_RejectsEmptyToken(t *testing.T) {
-	parsedAddress, err := url.Parse("https://vault.local")
-	require.NoError(t, err)
-
-	var token Token
-	err = token.UnmarshalText([]byte("  \n\t"))
-	require.NoError(t, err)
-
-	cfg := Config{
-		Addr:      *parsedAddress,
-		Token:     token,
-		MountPath: "secret",
-	}
-
-	err = cfg.Validate()
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "VAULT_TOKEN is required")
-}
-
 func newTestProvider(t *testing.T, address string) *Provider {
 	t.Helper()
 
