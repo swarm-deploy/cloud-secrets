@@ -13,6 +13,7 @@ type Provider struct {
 	cfg Config
 
 	client *vaultapi.Client
+	kv     *vaultapi.KVv2
 }
 
 func NewProvider(cfg Config) (*Provider, error) {
@@ -31,6 +32,7 @@ func NewProvider(cfg Config) (*Provider, error) {
 	return &Provider{
 		cfg:    cfg,
 		client: client,
+		kv:     client.KVv2(cfg.MountPath),
 	}, nil
 }
 

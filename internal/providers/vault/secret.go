@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
@@ -132,20 +131,12 @@ func (p *Provider) listKeys(ctx context.Context, path string) ([]string, error) 
 }
 
 func (p *Provider) readCurrentVersion(ctx context.Context, path string) (string, error) {
-	secret, err := p.client.Logical().ReadWithContext(ctx, p.metadataPath(path))
+	meta, err := p.kv.GetMetadata(ctx, path)
 	if err != nil {
 		return "", err
 	}
-	if secret == nil {
-		return "", errors.New("secret metadata not found")
-	}
 
-	rawVersion, ok := secret.Data["current_version"]
-	if !ok {
-		return "", errors.New("current_version not found in metadata")
-	}
-
-	return parseVersion(rawVersion)
+	return fmt.Sprintf("%d", meta.CurrentVersion), nil
 }
 
 func (p *Provider) readSecretKeys(ctx context.Context, path string) ([]string, error) {
@@ -183,28 +174,6 @@ func (p *Provider) readSecretData(ctx context.Context, path string) (map[string]
 	}
 
 	return data, nil
-}
-
-func parseVersion(rawVersion interface{}) (string, error) {
-	switch value := rawVersion.(type) {
-	case string:
-		if value == "" {
-			return "", errors.New("empty version")
-		}
-		return value, nil
-	case int:
-		return strconv.Itoa(value), nil
-	case int32:
-		return strconv.FormatInt(int64(value), 10), nil
-	case int64:
-		return strconv.FormatInt(value, 10), nil
-	case float64:
-		return strconv.FormatInt(int64(value), 10), nil
-	case json.Number:
-		return value.String(), nil
-	default:
-		return "", fmt.Errorf("unsupported version type %T", rawVersion)
-	}
 }
 
 func toBytes(value interface{}) ([]byte, error) {
