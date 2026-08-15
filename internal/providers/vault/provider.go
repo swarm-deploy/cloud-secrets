@@ -17,9 +17,10 @@ type Provider struct {
 }
 
 func NewProvider(cfg Config) (*Provider, error) {
-	client, err := vaultapi.NewClient(&vaultapi.Config{
-		Address: cfg.Addr.String(),
-	})
+	vaultCfg := vaultapi.DefaultConfig()
+	vaultCfg.Address = cfg.Addr.String()
+
+	client, err := vaultapi.NewClient(vaultCfg)
 	if err != nil {
 		return nil, fmt.Errorf("create vault client: %w", err)
 	}

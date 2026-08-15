@@ -22,9 +22,6 @@ type Token struct {
 }
 
 func (c *Config) Validate() error {
-	c.MountPath = strings.Trim(c.MountPath, "/")
-	c.Prefix = strings.Trim(c.Prefix, "/")
-
 	return nil
 }
 

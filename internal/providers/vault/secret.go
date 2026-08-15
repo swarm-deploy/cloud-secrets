@@ -3,7 +3,6 @@ package vault
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -11,30 +10,25 @@ import (
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
 )
 
-func (p *Provider) GetSecretPayload(ctx context.Context, key string) ([]byte, error) {
-	secretPath := strings.Trim(key, "/")
-	if secretPath == "" {
-		return nil, errors.New("secret path is empty")
-	}
-
-	basePath, keyName, splitErr := splitSecretKeyPath(secretPath)
-	if splitErr != nil {
-		return nil, fmt.Errorf("invalid secret path %q: %w", secretPath, splitErr)
-	}
-
-	baseData, err := p.readSecretData(ctx, basePath)
+func (p *Provider) GetSecretPayload(ctx context.Context, path string) ([]byte, error) {
+	sp, err := parseSecretPath(path)
 	if err != nil {
-		return nil, fmt.Errorf("read parent secret %q for key %q: %w", basePath, keyName, err)
+		return nil, fmt.Errorf("invalid secret path %q: %w", path, err)
 	}
 
-	value, ok := baseData[keyName]
+	baseData, err := p.readSecretData(ctx, sp.Path)
+	if err != nil {
+		return nil, fmt.Errorf("read parent secret %q for key %q: %w", sp.Path, sp.Key, err)
+	}
+
+	value, ok := baseData[sp.Key]
 	if !ok {
-		return nil, fmt.Errorf("secret %q key %q not found", basePath, keyName)
+		return nil, fmt.Errorf("secret %q key %q not found", sp.Path, sp.Key)
 	}
 
-	payload, payloadErr := toBytes(value)
-	if payloadErr != nil {
-		return nil, fmt.Errorf("convert payload for %q key %q: %w", basePath, keyName, payloadErr)
+	payload, err := toBytes(value)
+	if err != nil {
+		return nil, fmt.Errorf("convert payload for %q key %q: %w", sp.Path, sp.Key, err)
 	}
 
 	return payload, nil
@@ -218,15 +212,4 @@ func joinPath(parent string, child string) string {
 	}
 
 	return parent + "/" + child
-}
-
-func splitSecretKeyPath(path string) (secretPath string, keyName string, err error) {
-	idx := strings.LastIndex(path, "/")
-	if idx <= 0 || idx == len(path)-1 {
-		return "", "", fmt.Errorf("secret path %q does not contain a key segment", path)
-	}
-
-	secretPath = path[:idx]
-	keyName = path[idx+1:]
-	return secretPath, keyName, nil
 }
