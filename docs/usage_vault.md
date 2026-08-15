@@ -77,7 +77,7 @@ services:
       - CS_PROVIDER=vault
       - CS_REFRESH_INTERVAL=10s
       - CS_LOG_LEVEL=debug
-      - VAULT_ADDRESS=http://vault:8200
+      - VAULT_ADDR=http://vault:8200
       - VAULT_TOKEN=/var/run/secrets/vault_token
       - VAULT_MOUNT_PATH=secret
       - VAULT_PREFIX=cloud-secrets

@@ -7,8 +7,8 @@ import (
 
 // Config defines Vault provider settings.
 type Config struct {
-	// Address is Vault HTTP API endpoint.
-	Address url.URL `env:"ADDRESS,required"`
+	// Addr is Vault HTTP API endpoint.
+	Addr url.URL `env:"ADDR,required"`
 	// Token is Vault token used for API authentication.
 	Token Token `env:"TOKEN,required,file" json:"-"`
 	// MountPath is KV v2 mount path.

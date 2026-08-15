@@ -91,7 +91,7 @@ func TestConfigValidate_NormalizesTokenFromFileContent(t *testing.T) {
 	require.NoError(t, err)
 
 	cfg := Config{
-		Address:   *parsedAddress,
+		Addr:      *parsedAddress,
 		Token:     token,
 		MountPath: "/secret/",
 		Prefix:    "/cloud-secrets/",
@@ -113,7 +113,7 @@ func TestConfigValidate_RejectsEmptyToken(t *testing.T) {
 	require.NoError(t, err)
 
 	cfg := Config{
-		Address:   *parsedAddress,
+		Addr:      *parsedAddress,
 		Token:     token,
 		MountPath: "secret",
 	}
@@ -130,7 +130,7 @@ func newTestProvider(t *testing.T, address string) *Provider {
 	require.NoError(t, err)
 
 	provider, err := NewProvider(Config{
-		Address:   *parsedAddress,
+		Addr:      *parsedAddress,
 		Token:     Token{Value: "token"},
 		MountPath: "secret",
 		Prefix:    "cloud-secrets",
