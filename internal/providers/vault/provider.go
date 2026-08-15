@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	vaultapi "github.com/hashicorp/vault/api"
+	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
 )
 
 // Provider reads secrets from HashiCorp Vault KV v2.
@@ -31,4 +32,10 @@ func NewProvider(cfg Config) (*Provider, error) {
 		cfg:    cfg,
 		client: client,
 	}, nil
+}
+
+func (p *Provider) Definition() contracts.ProviderDefinition {
+	return contracts.ProviderDefinition{
+		Name: "HashiCorp Vault",
+	}
 }

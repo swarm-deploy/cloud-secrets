@@ -26,7 +26,7 @@ type Config struct {
 	Vault   vault.Config   `envPrefix:"VAULT_"`
 
 	CloudSecrets struct {
-		Provider ProviderType `env:"PROVIDER" envDefault:"cloudru"`
+		Provider        ProviderType  `env:"PROVIDER" envDefault:"cloudru"`
 		RefreshInterval time.Duration `env:"REFRESH_INTERVAL" envDefault:"5m"`
 
 		CleanupOrphanedSecrets bool `env:"CLEANUP_ORPHANED"`
