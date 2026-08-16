@@ -19,6 +19,9 @@ type prometheusDocker struct {
 	duration *prometheus.HistogramVec
 }
 
+type NopDocker struct {
+}
+
 func newPrometheusDocker(namespace string) *prometheusDocker {
 	return &prometheusDocker{
 		requests: prometheus.NewCounterVec(
@@ -50,4 +53,10 @@ func (m *prometheusDocker) RecordRequest(operation string, duration time.Duratio
 
 func (m *prometheusDocker) collectors() []prometheus.Collector {
 	return []prometheus.Collector{m.requests, m.duration}
+}
+
+func (m NopDocker) RecordRequest(string, time.Duration) {}
+
+func (m NopDocker) collectors() []prometheus.Collector {
+	return []prometheus.Collector{}
 }
