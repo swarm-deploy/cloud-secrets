@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strings"
 
-	go_console "github.com/DrSmithFr/go-console"
+	"github.com/swarm-deploy/cloud-secrets/internal/application/cli/framework"
 )
 
 const (
@@ -18,14 +18,14 @@ const (
 type SyncCommand struct {
 }
 
-func (c *SyncCommand) Definition() CommandDefinition {
-	return CommandDefinition{
+func (c *SyncCommand) Definition() framework.Definition {
+	return framework.Definition{
 		Name:        "sync",
 		Description: "Run synchronization",
 	}
 }
 
-func (c *SyncCommand) Run(ctx context.Context, _ *go_console.Script) error {
+func (c *SyncCommand) Run(ctx context.Context, _ *framework.Execution) error {
 	containerID, err := c.findContainerID(ctx)
 	if err != nil {
 		return fmt.Errorf("find container id: %w", err)
