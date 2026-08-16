@@ -8,6 +8,7 @@ import (
 	"github.com/swarm-deploy/cloud-secrets/internal/application/cli/framework"
 	"github.com/swarm-deploy/cloud-secrets/internal/config"
 	"github.com/swarm-deploy/cloud-secrets/internal/engine"
+	"github.com/swarm-deploy/cloud-secrets/internal/providers/cloudru"
 )
 
 type InitCommand struct {
@@ -99,6 +100,32 @@ func (c *InitCommand) initCloudru(ctx context.Context, exec *framework.Execution
 		})
 		if err != nil {
 			return fmt.Errorf("create client-secret secret: %w", err)
+		}
+	case credentialMethodIndexFromSM:
+		projectID, err := exec.Ask("Enter your project id")
+		if err != nil {
+			return err
+		}
+
+		clientIDSecretPath, err := exec.AskPassword("Enter path to secret with client id value")
+		if err != nil {
+			return err
+		}
+
+		clientSecretPath, err := exec.AskPassword("Enter path to secret with client secret value")
+		if err != nil {
+			return err
+		}
+
+		provider, err := cloudru.NewProvider(ctx, cloudru.Config{
+			IAM: cloudru.IAMConfig{
+				ClientID:     clientID,
+				ClientSecret: clientSecret,
+			},
+			ProjectID: projectID,
+		})
+		if err != nil {
+			return fmt.Errorf("init provider: %w", err)
 		}
 	}
 

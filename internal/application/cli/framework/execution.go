@@ -38,6 +38,15 @@ func (e *Execution) AskPassword(prompt string) (string, error) {
 	return password, nil
 }
 
+func (e *Execution) Ask(prompt string) (string, error) {
+	value := e.Question.Ask(question.NewQuestion(prompt))
+	if value == "" {
+		return "", errors.New("value not provided")
+	}
+
+	return value, nil
+}
+
 func (e *Execution) Confirm(prompt string) bool {
 	answer := e.Question.Ask(
 		question.

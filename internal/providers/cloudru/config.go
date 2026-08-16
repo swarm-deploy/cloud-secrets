@@ -14,12 +14,7 @@ func (f *RootFolder) UnmarshalText(text []byte) error {
 }
 
 type Config struct {
-	IAM struct {
-		Address string `env:"ADDRESS"`
-
-		ClientID     string `env:"CLIENT_ID,file,required,notEmpty"`
-		ClientSecret string `env:"CLIENT_SECRET,file,required,notEmpty" json:"-"`
-	} `envPrefix:"IAM_"`
+	IAM IAMConfig `envPrefix:"IAM_"`
 	CSM struct {
 		Address string `env:"ADDRESS"`
 	} `envPrefix:"CSM_"`
@@ -30,6 +25,13 @@ type Config struct {
 
 	RootFolder           RootFolder `env:"ROOT_FOLDER"`
 	RootFolderOmitPrefix bool       `env:"ROOT_FOLDER_OMIT_PREFIX"`
+}
+
+type IAMConfig struct {
+	Address string `env:"ADDRESS"`
+
+	ClientID     string `env:"CLIENT_ID,file,required,notEmpty"`
+	ClientSecret string `env:"CLIENT_SECRET,file,required,notEmpty" json:"-"`
 }
 
 func (c Config) Validate() error {
