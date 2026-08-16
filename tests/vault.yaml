@@ -24,6 +24,9 @@ services:
     cap_add:
       - IPC_LOCK
     command: vault server -dev -dev-root-token-id=root-token -dev-listen-address=0.0.0.0:8200
+    environment:
+      - VAULT_ADDR=http://localhost:8200
+      - VAULT_TOKEN=root-token
     deploy:
       placement:
         constraints:

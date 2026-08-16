@@ -1,11 +1,6 @@
 # Using HashiCorp Vault (KV v2)
 
-**Requirements**
-- A running Vault instance reachable from Docker Swarm manager nodes.
-- An enabled `KV v2` mount (for example, `secret/`).
-- A Vault token with `list` and `read` permissions for `metadata` and `data` paths under your selected prefix.
-
-## How Vault Keys Map to Swarm Secrets
+How Vault Keys Map to Swarm Secrets:
 - Each key inside one Vault secret (`data`) is synchronized as a separate Docker Swarm secret.
 - This rule always applies, even when a Vault secret has only one key.
 - External path format: `<vault-path>/<key>`.
@@ -13,24 +8,12 @@
   - `cloud-secrets-users-db-username`
   - `cloud-secrets-users-db-password`
 
-Example policy for the `cloud-secrets/` prefix in the `secret` mount:
+## Manual setup with existing Vault installation
 
-```hcl
-path "secret/metadata/cloud-secrets/*" {
-  capabilities = ["read", "list"]
-}
-
-path "secret/data/cloud-secrets/*" {
-  capabilities = ["read"]
-}
-```
-
-## Deploy
-
-Below is a full local `docker-compose.yaml` example that:
-- starts `vault` in dev mode,
-- initializes the `kv-v2` mount and a test secret via `vault-init`,
-- starts `cloud-secrets` with `CS_PROVIDER=vault`.
+**Requirements**
+- A running Vault instance reachable from Docker Swarm manager nodes.
+- An enabled `KV v2` mount (for example, `secret/`).
+- A Vault token with `list` and `read` permissions paths.
 
 <details>
   <summary>docker-compose.yaml</summary>
@@ -39,36 +22,6 @@ Below is a full local `docker-compose.yaml` example that:
 version: '3.8'
 
 services:
-  vault:
-    image: hashicorp/vault:1.18
-    ports:
-      - "8200:8200"
-    cap_add:
-      - IPC_LOCK
-    command: vault server -dev -dev-root-token-id=root-token -dev-listen-address=0.0.0.0:8200
-    deploy:
-      placement:
-        constraints:
-          - node.role == manager
-
-  vault-init:
-    image: hashicorp/vault:1.18
-    environment:
-      - VAULT_ADDR=http://vault:8200
-      - VAULT_TOKEN=root-token
-    command: >
-      sh -ec "
-        until vault status >/dev/null 2>&1; do sleep 1; done;
-        vault secrets enable -path=secret kv-v2 || true;
-        vault kv put secret/cloud-secrets/users-service-db-dsn value='postgres://user:pass@db:5432/app';
-      "
-    deploy:
-      restart_policy:
-        condition: none
-      placement:
-        constraints:
-          - node.role == manager
-
   cloud-secrets:
     image: swarmdeployorg/cloud-secrets:v0.4.0
     volumes:
@@ -78,11 +31,11 @@ services:
       - CS_REFRESH_INTERVAL=10s
       - CS_LOG_LEVEL=debug
       - VAULT_ADDR=http://vault:8200
-      - VAULT_TOKEN=/var/run/secrets/vault_token
+      - VAULT_TOKEN=/var/run/secrets/vault-token
       - VAULT_MOUNT_PATH=secret
       - VAULT_PREFIX=cloud-secrets
     secrets:
-      - vault_token
+      - vault-token
     deploy:
       labels:
         - prometheus.port=8000
@@ -91,26 +44,68 @@ services:
           - node.role == manager
 
 secrets:
-  vault_token:
+  vault-token:
     external: true
 ```
 </details>
 
-&raquo; &nbsp;1. Copy docker-compose.yaml
+Steps:
+
+<details>
+  <summary>1. Create new KV secrets engine in Vault</summary>
+
+1. On the Secret Engine creation page, select KV
+
+![](./screenshots/vault_1_1_se_kv.png)
+
+2. Enter the path `prod`
+
+![](./screenshots/vault_1_1_se_kv.png)
+
+3. Click the `Enable engine`  button
+</details>
+
+<details>
+  <summary>2. Create ACL Policy</summary>
+
+1. Enter the Name `cloud-secrets`
+2. Enter the Policy with definition:
+```hcl
+path "prod/*" {
+  capabilities = ["read", "list"]
+}
+```
+
+3. Click the "Create policy" button
+
+![](./screenshots/vault_1_1_se_kv.png)
+</details>
+
+<details>
+  <summary>3. Create new token for cloud-secrets</summary>
+
+Inside Vault container create token with follow command:
+
+```sh
+vault token create -policy=cloud-secrets
+```
+</details>
+
+&raquo; &nbsp;4. Copy docker-compose.yaml
 
 <details>
   <summary>2. Create a Docker Swarm Secret for the Vault Token</summary>
 
 ```sh
 printf %s "root-token" > vault_token
-docker secret create vault_token ./vault_token
+docker secret create vault-token ./vault_token
 ```
 </details>
 
 <details>
-  <summary>3. Deploy the Stack</summary>
+  <summary>5. Deploy the Stack</summary>
 
 ```sh
-docker stack deploy -c vault-compose.yaml cloud-secrets --detach=false
+docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false
 ```
 </details>
