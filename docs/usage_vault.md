@@ -70,7 +70,7 @@ services:
           - node.role == manager
 
   cloud-secrets:
-    image: swarmdeployorg/cloud-secrets:v0.1.0
+    image: swarmdeployorg/cloud-secrets:v0.4.0
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     environment:
