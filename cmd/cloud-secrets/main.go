@@ -12,8 +12,8 @@ import (
 	gopipeprom "github.com/artarts36/gopipe/pkg/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/swarm-deploy/cloud-secrets/internal/application/cs"
 
-	"github.com/swarm-deploy/cloud-secrets/internal/application"
 	"github.com/swarm-deploy/cloud-secrets/internal/config"
 	"github.com/swarm-deploy/cloud-secrets/internal/grpcx"
 	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
@@ -64,7 +64,7 @@ func main() {
 
 	metricsGroup.BuildInfo.Set(Version, BuildDate)
 
-	app, err := application.NewApplication(initCtx, *cfg, metricsGroup)
+	app, err := cs.NewApplication(initCtx, *cfg, metricsGroup)
 	if err != nil {
 		slog.Error("[main] failed to create application", slog.Any("err", err))
 		os.Exit(1)
