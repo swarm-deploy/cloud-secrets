@@ -6,14 +6,14 @@ import (
 
 	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
+	vaultclient "github.com/swarm-deploy/cloud-secrets/internal/providers/vault/api"
 )
 
 // Provider reads secrets from HashiCorp Vault KV v2.
 type Provider struct {
 	cfg Config
 
-	client *vaultapi.Client
-	kv     *vaultapi.KVv2
+	client vaultclient.Client
 }
 
 func NewProvider(cfg Config) (*Provider, error) {
@@ -32,8 +32,7 @@ func NewProvider(cfg Config) (*Provider, error) {
 
 	return &Provider{
 		cfg:    cfg,
-		client: client,
-		kv:     client.KVv2(cfg.MountPath),
+		client: vaultclient.NewHttpClient(client, cfg.MountPath),
 	}, nil
 }
 

@@ -127,6 +127,9 @@ func newVaultServer(t *testing.T) *httptest.Server {
 				"data": map[string]interface{}{
 					"value": "postgres://dsn",
 				},
+				"metadata": map[string]interface{}{
+					"version": 2,
+				},
 			})
 		case r.Method == http.MethodGet && r.URL.Path == "/v1/secret/data/cloud-secrets/json":
 			writeVaultData(w, map[string]interface{}{
@@ -134,11 +137,17 @@ func newVaultServer(t *testing.T) *httptest.Server {
 					"username": "svc",
 					"password": "secret",
 				},
+				"metadata": map[string]interface{}{
+					"version": 3,
+				},
 			})
 		case r.Method == http.MethodGet && r.URL.Path == "/v1/secret/data/cloud-secrets/nested/api":
 			writeVaultData(w, map[string]interface{}{
 				"data": map[string]interface{}{
 					"value": "nested-token",
+				},
+				"metadata": map[string]interface{}{
+					"version": 7,
 				},
 			})
 		case r.Method == http.MethodGet && r.URL.Path == "/v1/secret/data/cloud-secrets/mixed":
@@ -146,6 +155,9 @@ func newVaultServer(t *testing.T) *httptest.Server {
 				"data": map[string]interface{}{
 					"value":    "postgres://dsn",
 					"password": "secret",
+				},
+				"metadata": map[string]interface{}{
+					"version": 5,
 				},
 			})
 
