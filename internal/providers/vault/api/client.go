@@ -1,3 +1,4 @@
+//go:generate mockgen -source=$GOFILE -destination=mocks.go -package=api
 package api
 
 import (
@@ -9,11 +10,6 @@ import (
 
 	vaultapi "github.com/hashicorp/vault/api"
 )
-
-type Client interface {
-	ListKeys(ctx context.Context, path string) ([]string, error)
-	Get(ctx context.Context, path, key string) (*Secret, error)
-}
 
 type HttpClient struct {
 	client    *vaultapi.Client
@@ -38,7 +34,35 @@ func NewHttpClient(client *vaultapi.Client, mountPath string) *HttpClient {
 }
 
 func (c *HttpClient) ListKeys(ctx context.Context, path string) ([]string, error) {
-	return c.listKeys(ctx, path)
+	secret, err := c.client.Logical().ListWithContext(ctx, c.metadataPath(path))
+	if err != nil {
+		return nil, err
+	}
+	if secret == nil {
+		return nil, nil
+	}
+
+	rawKeys, ok := secret.Data["keys"]
+	if !ok {
+		return nil, nil
+	}
+
+	switch keys := rawKeys.(type) {
+	case []interface{}:
+		out := make([]string, 0, len(keys))
+		for _, key := range keys {
+			keyString, keyIsString := key.(string)
+			if !keyIsString {
+				return nil, fmt.Errorf("unexpected key type %T", key)
+			}
+			out = append(out, keyString)
+		}
+		return out, nil
+	case []string:
+		return keys, nil
+	default:
+		return nil, fmt.Errorf("unexpected keys payload type %T", rawKeys)
+	}
 }
 
 func (c *HttpClient) Get(ctx context.Context, path, key string) (*Secret, error) {
@@ -82,38 +106,6 @@ func (c *HttpClient) Get(ctx context.Context, path, key string) (*Secret, error)
 	out.Payload = payload
 
 	return out, nil
-}
-
-func (c *HttpClient) listKeys(ctx context.Context, path string) ([]string, error) {
-	secret, err := c.client.Logical().ListWithContext(ctx, c.metadataPath(path))
-	if err != nil {
-		return nil, err
-	}
-	if secret == nil {
-		return nil, nil
-	}
-
-	rawKeys, ok := secret.Data["keys"]
-	if !ok {
-		return nil, nil
-	}
-
-	switch keys := rawKeys.(type) {
-	case []interface{}:
-		out := make([]string, 0, len(keys))
-		for _, key := range keys {
-			keyString, keyIsString := key.(string)
-			if !keyIsString {
-				return nil, fmt.Errorf("unexpected key type %T", key)
-			}
-			out = append(out, keyString)
-		}
-		return out, nil
-	case []string:
-		return keys, nil
-	default:
-		return nil, fmt.Errorf("unexpected keys payload type %T", rawKeys)
-	}
 }
 
 func (c *HttpClient) metadataPath(secretPath string) string {

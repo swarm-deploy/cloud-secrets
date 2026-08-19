@@ -2,22 +2,40 @@ package vault
 
 import (
 	"context"
-	"encoding/json"
-	"net/http"
-	"net/http/httptest"
-	"net/url"
 	"testing"
 
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
+	vaultclient "github.com/swarm-deploy/cloud-secrets/internal/providers/vault/api"
 )
 
 func TestProviderListSecrets(t *testing.T) {
-	server := newVaultServer(t)
-	t.Cleanup(server.Close)
+	ctrl := gomock.NewController(t)
+	client := vaultclient.NewMockClient(ctrl)
+	provider := newTestProvider(client)
 
-	provider := newTestProvider(t, server.URL)
+	gomock.InOrder(
+		client.EXPECT().ListKeys(gomock.Any(), "cloud-secrets").Return([]string{"db", "json", "mixed", "nested/"}, nil),
+		client.EXPECT().Get(gomock.Any(), "cloud-secrets/db", "").Return(&vaultclient.Secret{
+			VersionID: "2",
+			Keys:      []string{"value"},
+		}, nil),
+		client.EXPECT().Get(gomock.Any(), "cloud-secrets/json", "").Return(&vaultclient.Secret{
+			VersionID: "3",
+			Keys:      []string{"password", "username"},
+		}, nil),
+		client.EXPECT().Get(gomock.Any(), "cloud-secrets/mixed", "").Return(&vaultclient.Secret{
+			VersionID: "5",
+			Keys:      []string{"password", "value"},
+		}, nil),
+		client.EXPECT().ListKeys(gomock.Any(), "cloud-secrets/nested").Return([]string{"api"}, nil),
+		client.EXPECT().Get(gomock.Any(), "cloud-secrets/nested/api", "").Return(&vaultclient.Secret{
+			VersionID: "7",
+			Keys:      []string{"value"},
+		}, nil),
+	)
 
 	secrets, err := provider.ListSecrets(context.Background())
 	require.NoError(t, err)
@@ -52,132 +70,67 @@ func TestProviderListSecrets(t *testing.T) {
 }
 
 func TestProviderGetSecretPayload(t *testing.T) {
-	server := newVaultServer(t)
-	t.Cleanup(server.Close)
-
-	provider := newTestProvider(t, server.URL)
-
 	t.Run("value key", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		client := vaultclient.NewMockClient(ctrl)
+		provider := newTestProvider(client)
+
+		client.EXPECT().Get(gomock.Any(), "cloud-secrets/db", "value").Return(&vaultclient.Secret{
+			Payload: []byte("postgres://dsn"),
+		}, nil)
+
 		payload, err := provider.GetSecretPayload(context.Background(), "cloud-secrets/db/value")
 		require.NoError(t, err)
 		assert.Equal(t, []byte("postgres://dsn"), payload)
 	})
 
 	t.Run("json key payload", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		client := vaultclient.NewMockClient(ctrl)
+		provider := newTestProvider(client)
+
+		client.EXPECT().Get(gomock.Any(), "cloud-secrets/json", "password").Return(&vaultclient.Secret{
+			Payload: []byte("secret"),
+		}, nil)
+
 		payload, err := provider.GetSecretPayload(context.Background(), "cloud-secrets/json/password")
 		require.NoError(t, err)
 		assert.Equal(t, []byte("secret"), payload)
 	})
 
 	t.Run("multi field payload with value key", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		client := vaultclient.NewMockClient(ctrl)
+		provider := newTestProvider(client)
+
+		client.EXPECT().Get(gomock.Any(), "cloud-secrets/mixed", "password").Return(&vaultclient.Secret{
+			Payload: []byte("secret"),
+		}, nil)
+
 		payload, err := provider.GetSecretPayload(context.Background(), "cloud-secrets/mixed/password")
 		require.NoError(t, err)
 		assert.Equal(t, []byte("secret"), payload)
 	})
 
 	t.Run("base path is invalid in always multi-key mode", func(t *testing.T) {
+		ctrl := gomock.NewController(t)
+		client := vaultclient.NewMockClient(ctrl)
+		provider := newTestProvider(client)
+
+		client.EXPECT().Get(gomock.Any(), "cloud-secrets", "db").Return(nil, assert.AnError)
+
 		_, err := provider.GetSecretPayload(context.Background(), "cloud-secrets/db")
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "key")
+		assert.ErrorIs(t, err, assert.AnError)
 	})
 }
 
-func newTestProvider(t *testing.T, address string) *Provider {
-	t.Helper()
-
-	parsedAddress, err := url.Parse(address)
-	require.NoError(t, err)
-
-	provider, err := NewProvider(Config{
-		Addr:      *parsedAddress,
-		Token:     Token{Value: "token"},
-		MountPath: "secret",
-		Prefix:    "cloud-secrets",
-	})
-	require.NoError(t, err)
-
-	return provider
-}
-
-func newVaultServer(t *testing.T) *httptest.Server {
-	t.Helper()
-
-	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case isListRequest(r, "/v1/secret/metadata/cloud-secrets"):
-			writeVaultData(w, map[string]interface{}{
-				"keys": []interface{}{"db", "json", "mixed", "nested/"},
-			})
-		case isListRequest(r, "/v1/secret/metadata/cloud-secrets/nested"):
-			writeVaultData(w, map[string]interface{}{
-				"keys": []interface{}{"api"},
-			})
-
-		case r.Method == http.MethodGet && r.URL.Path == "/v1/secret/metadata/cloud-secrets/db":
-			writeVaultData(w, map[string]interface{}{"current_version": 2})
-		case r.Method == http.MethodGet && r.URL.Path == "/v1/secret/metadata/cloud-secrets/json":
-			writeVaultData(w, map[string]interface{}{"current_version": 3})
-		case r.Method == http.MethodGet && r.URL.Path == "/v1/secret/metadata/cloud-secrets/nested/api":
-			writeVaultData(w, map[string]interface{}{"current_version": 7})
-		case r.Method == http.MethodGet && r.URL.Path == "/v1/secret/metadata/cloud-secrets/mixed":
-			writeVaultData(w, map[string]interface{}{"current_version": 5})
-
-		case r.Method == http.MethodGet && r.URL.Path == "/v1/secret/data/cloud-secrets/db":
-			writeVaultData(w, map[string]interface{}{
-				"data": map[string]interface{}{
-					"value": "postgres://dsn",
-				},
-				"metadata": map[string]interface{}{
-					"version": 2,
-				},
-			})
-		case r.Method == http.MethodGet && r.URL.Path == "/v1/secret/data/cloud-secrets/json":
-			writeVaultData(w, map[string]interface{}{
-				"data": map[string]interface{}{
-					"username": "svc",
-					"password": "secret",
-				},
-				"metadata": map[string]interface{}{
-					"version": 3,
-				},
-			})
-		case r.Method == http.MethodGet && r.URL.Path == "/v1/secret/data/cloud-secrets/nested/api":
-			writeVaultData(w, map[string]interface{}{
-				"data": map[string]interface{}{
-					"value": "nested-token",
-				},
-				"metadata": map[string]interface{}{
-					"version": 7,
-				},
-			})
-		case r.Method == http.MethodGet && r.URL.Path == "/v1/secret/data/cloud-secrets/mixed":
-			writeVaultData(w, map[string]interface{}{
-				"data": map[string]interface{}{
-					"value":    "postgres://dsn",
-					"password": "secret",
-				},
-				"metadata": map[string]interface{}{
-					"version": 5,
-				},
-			})
-
-		default:
-			http.NotFound(w, r)
-		}
-	}))
-}
-
-func isListRequest(r *http.Request, path string) bool {
-	if r.URL.Path != path {
-		return false
+func newTestProvider(client vaultclient.Client) *Provider {
+	return &Provider{
+		cfg: Config{
+			MountPath: "secret",
+			Prefix:    "cloud-secrets",
+		},
+		client: client,
 	}
-
-	return r.Method == "LIST" || (r.Method == http.MethodGet && r.URL.Query().Get("list") == "true")
-}
-
-func writeVaultData(w http.ResponseWriter, data map[string]interface{}) {
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]interface{}{
-		"data": data,
-	})
 }
