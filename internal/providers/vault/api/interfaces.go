@@ -7,3 +7,7 @@ type Client interface {
 	ListKeys(ctx context.Context, path string) ([]string, error)
 	Get(ctx context.Context, path, key string) (*Secret, error)
 }
+
+type Authenticator interface {
+	Authenticate(ctx context.Context) error
+}

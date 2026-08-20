@@ -27,7 +27,7 @@ func Create(
 
 		provider = p
 	case config.ProviderTypeVault:
-		p, err := vault.NewProvider(*cfg.Vault)
+		p, err := vault.NewProvider(ctx, *cfg.Vault)
 		if err != nil {
 			return nil, err
 		}

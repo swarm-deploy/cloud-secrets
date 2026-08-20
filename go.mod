@@ -14,6 +14,7 @@ require (
 	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/vault/api v1.22.0
+	github.com/hashicorp/vault/api/auth/approle v0.12.0
 	github.com/moby/moby/api v1.53.0
 	github.com/moby/moby/client v0.2.2
 	github.com/prometheus/client_golang v1.23.2

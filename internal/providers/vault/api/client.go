@@ -5,6 +5,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
+	"net/url"
 	"sort"
 	"strings"
 
@@ -23,14 +25,63 @@ type Secret struct {
 	Payload   []byte
 }
 
-func NewHttpClient(client *vaultapi.Client, mountPath string) *HttpClient {
-	mountPath = strings.Trim(mountPath, "/")
+func NewHttpClient(
+	ctx context.Context,
+	mountPath string,
+	addr url.URL,
+	authConfig AuthConfig,
+) (Client, error) {
+	clientBuild := func() (Client, error) {
+		vaultCfg := vaultapi.DefaultConfig()
+		vaultCfg.Address = addr.String()
 
-	return &HttpClient{
-		client:    client,
-		kv:        client.KVv2(mountPath),
-		mountPath: mountPath,
+		client, err := vaultapi.NewClient(vaultCfg)
+		if err != nil {
+			return nil, fmt.Errorf("create vault client: %w", err)
+		}
+
+		httpClient := &HttpClient{
+			client:    client,
+			kv:        client.KVv2(mountPath),
+			mountPath: strings.Trim(mountPath, "/"),
+		}
+
+		if authConfig.Token != "" {
+			client.SetToken(authConfig.Token)
+
+			return httpClient, nil
+		}
+
+		roleAuthenticator, err := NewAppRoleAuthenticator(
+			client,
+			authConfig.AppRole,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("create app role authenticator: %w", err)
+		}
+
+		decoratedClient := &AuthenticatedClient{
+			client:        httpClient,
+			authenticator: roleAuthenticator,
+		}
+
+		return decoratedClient, nil
 	}
+
+	client, err := clientBuild()
+	if err != nil {
+		return nil, err
+	}
+
+	slog.InfoContext(ctx, "[vault] ping")
+
+	if _, err = client.ListKeys(ctx, "/"); err != nil {
+		return nil, fmt.Errorf("ping vault: %w", err)
+	}
+
+	slog.InfoContext(ctx, "[vault] client created", slog.String("path", mountPath))
+
+	return client, nil
 }
 
 func (c *HttpClient) ListKeys(ctx context.Context, path string) ([]string, error) {

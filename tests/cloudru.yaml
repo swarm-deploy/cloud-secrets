@@ -36,7 +36,7 @@ services:
     secrets:
       - iam_id
       - iam_secret
-      # - vault_token
+      # - vault_auth_token
     deploy:
       labels:
         - prometheus.port=8000
@@ -54,5 +54,5 @@ secrets:
   iam_secret:
     external: true
   # Токен для Vault (используется в режиме CS_PROVIDER=vault)
-  vault_token:
+  vault_auth_token:
     external: true

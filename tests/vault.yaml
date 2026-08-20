@@ -26,7 +26,6 @@ services:
     command: vault server -dev -dev-root-token-id=root-token -dev-listen-address=0.0.0.0:8200
     environment:
       - VAULT_ADDR=http://localhost:8200
-      - VAULT_TOKEN=root-token
     deploy:
       placement:
         constraints:
@@ -36,10 +35,10 @@ services:
     image: hashicorp/vault:1.18
     environment:
       - VAULT_ADDR=http://vault:8200
-      - VAULT_TOKEN=root-token
     command: >
       sh -ec "
         until vault status >/dev/null 2>&1; do sleep 1; done;
+        vault login root-token >/dev/null;
         vault secrets enable -path=secret kv-v2 || true;
         vault kv put secret/cloud-secrets/users-service-db-dsn value='postgres://user:pass@db:5432/app';
       "
@@ -64,11 +63,11 @@ services:
       - CS_REFRESH_INTERVAL=10s
       - CS_LOG_LEVEL=debug
       - VAULT_ADDR=http://vault:8200
-      - VAULT_TOKEN=/var/run/secrets/vault_token
+      - VAULT_AUTH_TOKEN=/var/run/secrets/vault-auth-token
       - VAULT_MOUNT_PATH=secret
       - VAULT_PREFIX=cloud-secrets
     secrets:
-      - vault_token
+      - vault-auth-token
     deploy:
       labels:
         - prometheus.port=8000
@@ -77,7 +76,7 @@ services:
           - node.role == manager
 
 secrets:
-  vault_token:
-    file: ./vault_token
+  vault-auth-token:
+    file: ./vault-auth-token
 #  cloud-secrets-users-service-db-dsn-value:
 #    external: true
