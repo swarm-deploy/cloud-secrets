@@ -33,7 +33,6 @@ services:
       - VAULT_ADDR=http://vault:8200
       - vault-auth-token=/var/run/secrets/vault-auth-token
       - VAULT_MOUNT_PATH=secret
-      - VAULT_PREFIX=cloud-secrets
     secrets:
       - vault-auth-token
     deploy:

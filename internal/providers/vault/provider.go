@@ -18,7 +18,6 @@ type Provider struct {
 
 func NewProvider(ctx context.Context, cfg Config) (*Provider, error) {
 	cfg.MountPath = strings.Trim(cfg.MountPath, "/")
-	cfg.Prefix = strings.Trim(cfg.Prefix, "/")
 
 	client, err := vaultclient.NewHttpClient(ctx, cfg.MountPath, cfg.Addr, cfg.Auth)
 	if err != nil {
@@ -57,7 +56,7 @@ func (p *Provider) GetSecretPayload(ctx context.Context, path string) ([]byte, e
 func (p *Provider) ListSecrets(ctx context.Context) (map[string]contracts.Secret, error) {
 	secrets := make(map[string]contracts.Secret)
 
-	pathsToScan := []string{p.cfg.Prefix}
+	pathsToScan := []string{""}
 	seenPaths := map[string]struct{}{}
 
 	for len(pathsToScan) > 0 {

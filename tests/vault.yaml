@@ -80,8 +80,8 @@ secrets:
   vault-auth-token:
     file: ./vault-auth-token
   vault-auth-approle-role-id:
-    file: ./vault-auth-approle-role-id
+    file: ./vault-auth-approle-id
   vault-auth-approle-secret-id:
-    file: ./vault-auth-approle-secret-id
+    file: ./vault-auth-secret-id
 #  cloud-secrets-users-service-db-dsn-value:
 #    external: true

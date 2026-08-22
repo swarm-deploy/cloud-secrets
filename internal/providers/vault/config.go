@@ -23,8 +23,6 @@ type Config struct {
 
 	// MountPath is KV v2 mount path.
 	MountPath string `env:"MOUNT_PATH" envDefault:"secret"`
-	// Prefix limits synchronization to a subtree under mount path.
-	Prefix string `env:"PREFIX"`
 }
 
 func (c *Config) Validate() error {
