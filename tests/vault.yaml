@@ -63,7 +63,8 @@ services:
       - CS_REFRESH_INTERVAL=10s
       - CS_LOG_LEVEL=debug
       - VAULT_ADDR=http://vault:8200
-      - VAULT_AUTH_TOKEN=/var/run/secrets/vault-auth-token
+#      - VAULT_AUTH_TOKEN=/var/run/secrets/vault-auth-token
+      - VAULT_AUTH_APPROLE_ROLE_ID=/var/run/secrets/vault-auth-approle-role-id
       - VAULT_MOUNT_PATH=secret
       - VAULT_PREFIX=cloud-secrets
     secrets:
@@ -78,5 +79,9 @@ services:
 secrets:
   vault-auth-token:
     file: ./vault-auth-token
+  vault-auth-approle-role-id:
+    file: ./vault-auth-approle-role-id
+  vault-auth-approle-secret-id:
+    file: ./vault-auth-approle-secret-id
 #  cloud-secrets-users-service-db-dsn-value:
 #    external: true

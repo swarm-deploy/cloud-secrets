@@ -8,14 +8,12 @@ How Vault Keys Map to Swarm Secrets:
   - `cloud-secrets-users-db-username`
   - `cloud-secrets-users-db-password`
 
-## Manual setup with existing Vault installation
+## Setup with Vault Token
 
 **Requirements**
 - A running Vault instance reachable from Docker Swarm manager nodes.
 - An enabled `KV v2` mount (for example, `secret/`).
-- Either:
 - A file-mounted Vault runtime token with `list` and `read` permissions.
-- Or Vault AppRole credentials able to log in and obtain such a token.
 
 <details>
   <summary>docker-compose.yaml</summary>
@@ -33,7 +31,7 @@ services:
       - CS_REFRESH_INTERVAL=10s
       - CS_LOG_LEVEL=debug
       - VAULT_ADDR=http://vault:8200
-      - VAULT_AUTH_TOKEN=/var/run/secrets/vault-auth-token
+      - vault-auth-token=/var/run/secrets/vault-auth-token
       - VAULT_MOUNT_PATH=secret
       - VAULT_PREFIX=cloud-secrets
     secrets:
@@ -50,17 +48,6 @@ secrets:
     external: true
 ```
 </details>
-
-Static token auth expects `VAULT_AUTH_TOKEN` to contain a path to a file with the Vault token, for example a mounted Docker secret.
-
-AppRole auth uses:
-
-```text
-VAULT_AUTH_APPROLE_ROLE_ID
-VAULT_AUTH_APPROLE_SECRET_ID
-```
-
-When both AppRole variables are set, `cloud-secrets` logs in via `POST /v1/auth/approle/login` and keeps the returned runtime token only in memory.
 
 Steps:
 
@@ -104,19 +91,19 @@ vault token create -policy=cloud-secrets
 ```
 </details>
 
-&raquo; &nbsp;4. Copy docker-compose.yaml
-
 <details>
-  <summary>2. Create a Docker Swarm Secret for the Vault Token</summary>
+  <summary>4. Create a Docker Swarm Secret for the Vault Token</summary>
 
 ```sh
-printf %s "root-token" > vault_auth_token
-docker secret create vault-auth-token ./vault_auth_token
+printf %s "root-token" > vault-auth-token
+docker secret create vault-auth-token --label cloud-secrets.secret.managed=true ./vault-auth-token
 ```
 </details>
 
+&raquo; 5. Copy docker-compose.yaml
+
 <details>
-  <summary>5. Deploy the Stack</summary>
+  <summary>6. Deploy the Stack</summary>
 
 ```sh
 docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false
