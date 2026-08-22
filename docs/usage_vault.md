@@ -15,40 +15,7 @@ How Vault Keys Map to Swarm Secrets:
 - An enabled `KV v2` mount (for example, `secret/`).
 - A file-mounted Vault runtime token with `list` and `read` permissions.
 
-<details>
-  <summary>docker-compose.yaml</summary>
-
-```yaml
-version: '3.8'
-
-services:
-  cloud-secrets:
-    image: swarmdeployorg/cloud-secrets:v0.4.0
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-    environment:
-      - CS_PROVIDER=vault
-      - CS_REFRESH_INTERVAL=10s
-      - CS_LOG_LEVEL=debug
-      - VAULT_ADDR=http://vault:8200
-      - vault-auth-token=/var/run/secrets/vault-auth-token
-      - VAULT_MOUNT_PATH=secret
-    secrets:
-      - vault-auth-token
-    deploy:
-      labels:
-        - prometheus.port=8000
-      placement:
-        constraints:
-          - node.role == manager
-
-secrets:
-  vault-auth-token:
-    external: true
-```
-</details>
-
-Steps:
+**Steps**
 
 <details>
   <summary>1. Create new KV secrets engine in Vault</summary>
@@ -99,7 +66,38 @@ docker secret create vault-auth-token --label cloud-secrets.secret.managed=true 
 ```
 </details>
 
-&raquo; 5. Copy docker-compose.yaml
+<details>
+  <summary>5. Copy docker-compose.yaml for cloud-secrets Stack </summary>
+
+```yaml
+version: '3.8'
+
+services:
+  cloud-secrets:
+    image: swarmdeployorg/cloud-secrets:v0.4.0
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    environment:
+      - CS_PROVIDER=vault
+      - CS_REFRESH_INTERVAL=10s
+      - CS_LOG_LEVEL=debug
+      - VAULT_ADDR=http://vault:8200
+      - vault-auth-token=/var/run/secrets/vault-auth-token
+      - VAULT_MOUNT_PATH=secret
+    secrets:
+      - vault-auth-token
+    deploy:
+      labels:
+        - prometheus.port=8000
+      placement:
+        constraints:
+          - node.role == manager
+
+secrets:
+  vault-auth-token:
+    external: true
+```
+</details>
 
 <details>
   <summary>6. Deploy the Stack</summary>
