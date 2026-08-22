@@ -19,14 +19,14 @@ func Create(
 	var provider contracts.Provider
 
 	switch cfg.CloudSecrets.Provider {
-	case config.ProviderTypeCloudRU:
+	case config.ProviderNameCloudRU:
 		p, err := cloudru.NewProvider(ctx, *cfg.CloudRu)
 		if err != nil {
 			return nil, err
 		}
 
 		provider = p
-	case config.ProviderTypeVault:
+	case config.ProviderNameVault:
 		p, err := vault.NewProvider(ctx, *cfg.Vault)
 		if err != nil {
 			return nil, err
@@ -37,8 +37,8 @@ func Create(
 		return nil, fmt.Errorf(
 			"unsupported secrets provider %q, supported values: %q, %q",
 			cfg.CloudSecrets.Provider,
-			config.ProviderTypeCloudRU,
-			config.ProviderTypeVault,
+			config.ProviderNameCloudRU,
+			config.ProviderNameVault,
 		)
 	}
 

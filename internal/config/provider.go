@@ -12,11 +12,16 @@ import (
 type ProviderName string
 
 const (
-	// ProviderTypeCloudRU selects Cloud.ru Secret Manager backend.
-	ProviderTypeCloudRU ProviderName = "cloudru"
-	// ProviderTypeVault selects HashiCorp Vault backend.
-	ProviderTypeVault ProviderName = "vault"
+	// ProviderNameCloudRU selects Cloud.ru Secret Manager backend.
+	ProviderNameCloudRU ProviderName = "cloudru"
+	// ProviderNameVault selects HashiCorp Vault backend.
+	ProviderNameVault ProviderName = "vault"
 )
+
+var ProviderNames = []string{
+	string(ProviderNameCloudRU),
+	string(ProviderNameVault),
+}
 
 func (t *ProviderName) UnmarshalText(text []byte) error {
 	typ := ProviderName(text)
@@ -31,32 +36,32 @@ func (t *ProviderName) UnmarshalText(text []byte) error {
 
 func (t ProviderName) Validate() error {
 	switch t {
-	case ProviderTypeCloudRU:
+	case ProviderNameCloudRU:
 		return nil
-	case ProviderTypeVault:
+	case ProviderNameVault:
 		return nil
 	default:
 		return fmt.Errorf(
 			"unsupported CS_PROVIDER=%q, supported values: %q, %q",
 			t,
-			ProviderTypeCloudRU,
-			ProviderTypeVault,
+			ProviderNameCloudRU,
+			ProviderNameVault,
 		)
 	}
 }
 
 func loadProviderConfig(cfg *Config) error {
 	switch cfg.CloudSecrets.Provider {
-	case ProviderTypeCloudRU:
+	case ProviderNameCloudRU:
 		return loadProviderCloudruConfig(cfg)
-	case ProviderTypeVault:
+	case ProviderNameVault:
 		return loadProviderVaultConfig(cfg)
 	default:
 		return fmt.Errorf(
 			"unsupported CS_PROVIDER=%q, supported values: %q, %q",
 			cfg.CloudSecrets.Provider,
-			ProviderTypeCloudRU,
-			ProviderTypeVault,
+			ProviderNameCloudRU,
+			ProviderNameVault,
 		)
 	}
 }
