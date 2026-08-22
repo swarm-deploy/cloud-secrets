@@ -4,6 +4,7 @@
 
 Supported cloud providers:
 - [Cloud.ru Secret Manager](./docs/usage_cloudru.md)
+- [HashiCorp Vault (KV v2)](./docs/usage_vault.md)
 
 ## How it works
 

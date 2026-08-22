@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"fmt"
+	"log/slog"
 )
 
 const stepLoadExternalState = "load_external_state"
@@ -14,6 +15,10 @@ func (s *Synchronizer) loadExternalState(ctx context.Context, payload *syncPaylo
 	}
 
 	payload.externalSecrets = externalSecrets
+
+	slog.DebugContext(ctx, "[synchronizer] secrets loaded from external storage",
+		slog.Any("secrets", externalSecrets),
+	)
 
 	return nil
 }

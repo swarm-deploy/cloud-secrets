@@ -10,7 +10,7 @@ version: '3.8'
 
 services:
   cloud-secrets:
-    image: swarmdeployorg/cloud-secrets:v0.3.0
+    image: swarmdeployorg/cloud-secrets:v0.4.0
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     environment:

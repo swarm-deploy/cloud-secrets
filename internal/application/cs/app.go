@@ -15,7 +15,7 @@ import (
 	"github.com/swarm-deploy/cloud-secrets/internal/config"
 	"github.com/swarm-deploy/cloud-secrets/internal/engine"
 	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
-	"github.com/swarm-deploy/cloud-secrets/internal/providers/cloudru"
+	"github.com/swarm-deploy/cloud-secrets/internal/providers"
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
 	"github.com/swarm-deploy/cloud-secrets/internal/sync"
 )
@@ -49,14 +49,14 @@ func NewApplication(ctx context.Context, cfg config.Config, metricsGroup *metric
 
 	app.docker = dockerClient
 
-	slog.Info("[app] creating secret provider")
+	slog.Info("[app] creating secret provider", slog.String("provider", string(cfg.CloudSecrets.Provider)))
 
-	provider, err := cloudru.NewProvider(ctx, cfg.CloudRu)
+	provider, err := providers.Create(ctx, cfg, metricsGroup.Provider)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create secret provider: %w", err)
 	}
 
-	app.secretProvider = contracts.WithMetrics(provider, metricsGroup.Provider)
+	app.secretProvider = provider
 
 	app.synchronizer = sync.NewSynchronizer(
 		engine.NewDockerClient(dockerClient, metricsGroup.Docker),
