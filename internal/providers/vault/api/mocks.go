@@ -34,6 +34,49 @@ func (m *MockClient) EXPECT() *MockClientMockRecorder {
 	return m.recorder
 }
 
+// CreateACLPolicy mocks base method.
+func (m *MockClient) CreateACLPolicy(ctx context.Context, name string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateACLPolicy", ctx, name)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateACLPolicy indicates an expected call of CreateACLPolicy.
+func (mr *MockClientMockRecorder) CreateACLPolicy(ctx, name interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateACLPolicy", reflect.TypeOf((*MockClient)(nil).CreateACLPolicy), ctx, name)
+}
+
+// CreateSecret mocks base method.
+func (m *MockClient) CreateSecret(ctx context.Context, path string, data map[string]interface{}) (*Secret, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateSecret", ctx, path, data)
+	ret0, _ := ret[0].(*Secret)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateSecret indicates an expected call of CreateSecret.
+func (mr *MockClientMockRecorder) CreateSecret(ctx, path, data interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSecret", reflect.TypeOf((*MockClient)(nil).CreateSecret), ctx, path, data)
+}
+
+// DeleteSecret mocks base method.
+func (m *MockClient) DeleteSecret(ctx context.Context, path string) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "DeleteSecret", ctx, path)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// DeleteSecret indicates an expected call of DeleteSecret.
+func (mr *MockClientMockRecorder) DeleteSecret(ctx, path interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeleteSecret", reflect.TypeOf((*MockClient)(nil).DeleteSecret), ctx, path)
+}
+
 // Get mocks base method.
 func (m *MockClient) Get(ctx context.Context, path, key string) (*Secret, error) {
 	m.ctrl.T.Helper()

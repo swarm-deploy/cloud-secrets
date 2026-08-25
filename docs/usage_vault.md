@@ -106,3 +106,150 @@ secrets:
 docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false
 ```
 </details>
+
+## Setup with Vault AppRole
+
+**Requirements**
+
+* A running Vault instance reachable from Docker Swarm manager nodes.
+* An enabled `KV v2` mount (for example, `prod/`).
+* An enabled Vault `AppRole` auth method.
+* A Vault AppRole with a policy that has `list` and `read` permissions for the configured KV mount.
+
+**Steps**
+
+<details>
+  <summary>1. Create new KV secrets engine in Vault</summary>
+
+1. On the Secret Engine creation page, select KV.
+
+![](./screenshots/vault_1_1_se_kv.png)
+
+2. Enter the path `prod`.
+
+![](./screenshots/vault_1_2_se_name.png)
+
+3. Click the `Enable engine` button.
+
+</details>
+
+<details>
+  <summary>2. Create ACL Policy</summary>
+
+1. Enter the Name `cloud-secrets`.
+2. Enter the Policy with definition:
+
+```hcl
+path "prod/metadata" {
+  capabilities = ["list"]
+}
+
+path "prod/metadata/*" {
+  capabilities = ["read", "list"]
+}
+
+path "prod/data/*" {
+  capabilities = ["read"]
+}
+```
+
+3. Click the `Create policy` button.
+
+![](./screenshots/vault_3_1_acl.png)
+
+</details>
+
+<details>
+  <summary>3. Enable AppRole authentication</summary>
+
+Enable the AppRole auth method:
+
+```sh
+vault auth enable approle
+```
+
+If AppRole is already enabled, this step can be skipped.
+
+</details>
+
+<details>
+  <summary>4. Create AppRole for cloud-secrets</summary>
+
+Create an AppRole and attach the `cloud-secrets` policy:
+
+```sh
+vault write auth/approle/role/cloud-secrets \
+  token_policies="cloud-secrets" \
+  token_ttl="1h" \
+  token_max_ttl="4h" \
+  secret_id_ttl="0" \
+  secret_id_num_uses="0"
+```
+
+`cloud-secrets` uses the RoleID and SecretID only to authenticate with Vault. The Vault runtime token returned by AppRole is kept in memory and is automatically obtained again when required.
+
+In this example the SecretID does not expire and has no usage limit. Rotate the SecretID separately if required by your security policy.
+
+</details>
+
+<details>
+  <summary>5. Get AppRole RoleID and SecretID</summary>
+
+Get the RoleID:
+
+```sh
+vault read -field=role_id auth/approle/role/cloud-secrets/role-id
+```
+
+Generate a SecretID:
+
+```sh
+vault write -field=secret_id -f auth/approle/role/cloud-secrets/secret-id
+```
+
+Save both values. The SecretID is a secret and must not be committed to the repository.
+
+</details>
+
+<details>
+  <summary>6. Create Docker Swarm Secrets for AppRole credentials</summary>
+
+Create a Swarm secret containing the RoleID:
+
+```sh
+printf %s "<ROLE_ID>" | \
+  docker secret create \
+    --label cloud-secrets.secret.managed=true \
+    vault-approle-role-id -
+```
+
+Create a Swarm secret containing the SecretID:
+
+```sh
+printf %s "<SECRET_ID>" | \
+  docker secret create \
+    --label cloud-secrets.secret.managed=true \
+    vault-approle-secret-id -
+```
+
+The secrets will be mounted into the `cloud-secrets` container at:
+
+```text
+/run/secrets/vault-approle-role-id
+/run/secrets/vault-approle-secret-id
+```
+
+</details>
+
+<details>
+  <summary>7. Copy docker-compose.yaml for cloud-secrets Stack </summary>
+
+</details>
+
+<details>
+  <summary>8. Deploy the Stack</summary>
+
+```sh
+docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false
+```
+</details>

@@ -27,3 +27,31 @@ func (d *AuthenticatedClient) Get(ctx context.Context, path, key string) (*Secre
 
 	return d.client.Get(ctx, path, key)
 }
+
+func (d *AuthenticatedClient) CreateSecret(
+	ctx context.Context,
+	path string,
+	data map[string]interface{},
+) (*Secret, error) {
+	if err := d.authenticator.Authenticate(ctx); err != nil {
+		return nil, fmt.Errorf("authenticate: %w", err)
+	}
+
+	return d.client.CreateSecret(ctx, path, data)
+}
+
+func (d *AuthenticatedClient) DeleteSecret(ctx context.Context, path string) error {
+	if err := d.authenticator.Authenticate(ctx); err != nil {
+		return fmt.Errorf("authenticate: %w", err)
+	}
+
+	return d.client.DeleteSecret(ctx, path)
+}
+
+func (d *AuthenticatedClient) CreateACLPolicy(ctx context.Context, name string) error {
+	if err := d.authenticator.Authenticate(ctx); err != nil {
+		return fmt.Errorf("authenticate: %w", err)
+	}
+
+	return d.client.CreateACLPolicy(ctx, name)
+}
