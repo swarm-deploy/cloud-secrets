@@ -10,6 +10,7 @@ type Client interface {
 	CreateSecret(ctx context.Context, path string, data map[string]interface{}) (*Secret, error)
 	CreateACLPolicy(ctx context.Context, name string) error
 	DeleteSecret(ctx context.Context, path string) error
+	CreateToken(ctx context.Context, policies []string) (string, error)
 }
 
 type Authenticator interface {

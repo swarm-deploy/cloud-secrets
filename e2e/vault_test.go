@@ -13,7 +13,6 @@ import (
 	"testing"
 	"time"
 
-	vaultapi "github.com/hashicorp/vault/api"
 	"github.com/moby/moby/api/types/swarm"
 	dock "github.com/moby/moby/client"
 	"github.com/stretchr/testify/require"
@@ -95,7 +94,7 @@ func setupVaultFixture(t *testing.T, ctx context.Context) *vaultFixture {
 
 	require.NoError(t, vault.CreateACLPolicy(ctx, vaultPolicyName))
 
-	runtimeToken, err := createVaultToken(ctx, vaultAddr, []string{vaultPolicyName})
+	runtimeToken, err := vault.CreateToken(ctx, []string{vaultPolicyName})
 	require.NoError(t, err)
 
 	authSecretID, err := docker.CreateSecret(ctx, vaultAuthSecretName, []byte(runtimeToken))
@@ -370,32 +369,6 @@ func requireNoPreexistingSecret(t *testing.T, ctx context.Context, docker *Docke
 	}
 
 	t.Fatalf("Docker secret %q already exists with id %q; remove it before running e2e tests", name, secret.ID)
-}
-
-func createVaultToken(ctx context.Context, addr string, policies []string) (string, error) {
-	cfg := vaultapi.DefaultConfig()
-	cfg.Address = addr
-
-	client, err := vaultapi.NewClient(cfg)
-	if err != nil {
-		return "", fmt.Errorf("create Vault token client: %w", err)
-	}
-	client.SetToken(vaultRootToken)
-
-	secret, err := client.Auth().Token().CreateWithContext(ctx, &vaultapi.TokenCreateRequest{
-		Policies:        policies,
-		DisplayName:     "cloud-secrets-e2e",
-		TTL:             "1h",
-		NoDefaultPolicy: true,
-	})
-	if err != nil {
-		return "", fmt.Errorf("create Vault token: %w", err)
-	}
-	if secret == nil || secret.Auth == nil || secret.Auth.ClientToken == "" {
-		return "", fmt.Errorf("create Vault token: Vault returned empty token")
-	}
-
-	return secret.Auth.ClientToken, nil
 }
 
 func waitVaultReady(ctx context.Context, addr string) error {

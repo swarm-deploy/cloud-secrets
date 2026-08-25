@@ -55,3 +55,11 @@ func (d *AuthenticatedClient) CreateACLPolicy(ctx context.Context, name string) 
 
 	return d.client.CreateACLPolicy(ctx, name)
 }
+
+func (d *AuthenticatedClient) CreateToken(ctx context.Context, policies []string) (string, error) {
+	if err := d.authenticator.Authenticate(ctx); err != nil {
+		return "", fmt.Errorf("authenticate: %w", err)
+	}
+
+	return d.client.CreateToken(ctx, policies)
+}

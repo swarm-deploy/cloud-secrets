@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+
+	vaultapi "github.com/hashicorp/vault/api"
 )
 
 func (c *HttpClient) CreateSecret(ctx context.Context, path string, data map[string]interface{}) (*Secret, error) {
@@ -76,4 +78,21 @@ path "%s/data/*" {
 	}
 
 	return nil
+}
+
+func (c *HttpClient) CreateToken(ctx context.Context, policies []string) (string, error) {
+	secret, err := c.client.Auth().Token().CreateWithContext(ctx, &vaultapi.TokenCreateRequest{
+		Policies:        policies,
+		DisplayName:     "cloud-secrets-e2e",
+		TTL:             "1h",
+		NoDefaultPolicy: true,
+	})
+	if err != nil {
+		return "", fmt.Errorf("create Vault token: %w", err)
+	}
+	if secret == nil || secret.Auth == nil || secret.Auth.ClientToken == "" {
+		return "", fmt.Errorf("create Vault token: Vault returned empty token")
+	}
+
+	return secret.Auth.ClientToken, nil
 }
