@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"os"
@@ -14,9 +13,9 @@ import (
 	"time"
 
 	"github.com/moby/moby/api/types/swarm"
-	dock "github.com/moby/moby/client"
 	"github.com/stretchr/testify/require"
 	vaultclient "github.com/swarm-deploy/cloud-secrets/internal/providers/vault/api"
+	"github.com/swarm-deploy/dockertester"
 )
 
 func TestVault(t *testing.T) {
@@ -37,7 +36,7 @@ func TestVault(t *testing.T) {
 
 type vaultFixture struct {
 	ctx       context.Context
-	docker    *DockerClient
+	docker    *dockertester.Tester
 	vault     vaultclient.Client
 	networkID string
 	runID     string
@@ -46,40 +45,39 @@ type vaultFixture struct {
 func setupVaultFixture(t *testing.T, ctx context.Context) *vaultFixture {
 	t.Helper()
 
-	docker, err := NewDockerClient()
+	docker, err := dockertester.NewTester()
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		require.NoError(t, docker.Close())
 	})
 
-	_, err = docker.client.SwarmInspect(ctx, dock.SwarmInspectOptions{})
-	require.NoError(t, err, "Docker Swarm must be initialized before running Vault e2e tests")
+	docker.Swarm().RequireSwarmMode(ctx, t)
 
 	requireNoPreexistingSecret(t, ctx, docker, vaultAuthSecretName)
 	requireNoPreexistingSecret(t, ctx, docker, dockerSecretName)
 
 	runID := "cs-e2e-" + strconv.FormatInt(time.Now().UnixNano(), 36)
 
-	networkID, err := docker.createNetwork(ctx, runID+"-net")
+	networkID, err := docker.Network().CreateSwarmOverlay(ctx, runID+"-net")
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cleanupCancel()
-		require.NoError(t, docker.deleteNetwork(cleanupCtx, networkID))
+		require.NoError(t, docker.Network().Delete(cleanupCtx, networkID))
 	})
 
-	vaultPort, err := freeTCPPort()
+	vaultPort, err := dockertester.FreeTCPPort()
 	require.NoError(t, err)
 
-	vaultServiceID, err := docker.DeployService(ctx, vaultServiceSpec(runID+"-vault", vaultImage, networkID, vaultPort))
+	vaultServiceID, err := docker.Service().Deploy(ctx, vaultServiceSpec(runID+"-vault", vaultImage, networkID, vaultPort))
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cleanupCancel()
-		require.NoError(t, docker.DeleteService(cleanupCtx, vaultServiceID))
-		require.NoError(t, docker.waitServiceRemoved(cleanupCtx, vaultServiceID))
+		require.NoError(t, docker.Service().Delete(cleanupCtx, vaultServiceID))
+		require.NoError(t, docker.Service().WaitRemoved(cleanupCtx, vaultServiceID))
 	})
-	require.NoError(t, docker.WaitServiceHealthy(ctx, vaultServiceID))
+	require.NoError(t, docker.Service().WaitHealthy(ctx, vaultServiceID))
 
 	vaultAddr := fmt.Sprintf("http://127.0.0.1:%d", vaultPort)
 	require.NoError(t, waitVaultReady(ctx, vaultAddr))
@@ -97,7 +95,7 @@ func setupVaultFixture(t *testing.T, ctx context.Context) *vaultFixture {
 	runtimeToken, err := vault.CreateToken(ctx, []string{vaultPolicyName})
 	require.NoError(t, err)
 
-	authSecretID, err := docker.CreateSecret(ctx, vaultAuthSecretName, []byte(runtimeToken))
+	authSecretID, err := docker.Secret().CreateSecret(ctx, vaultAuthSecretName, []byte(runtimeToken))
 	require.NoError(t, err)
 	t.Cleanup(func() {
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -107,7 +105,7 @@ func setupVaultFixture(t *testing.T, ctx context.Context) *vaultFixture {
 
 	time.Sleep(500 * time.Millisecond)
 
-	cloudSecretsServiceID, err := docker.DeployService(
+	cloudSecretsServiceID, err := docker.Service().Deploy(
 		ctx,
 		cloudSecretsServiceSpec(runID+"-cloud-secrets", cloudSecretsImage, networkID, authSecretID),
 	)
@@ -115,10 +113,10 @@ func setupVaultFixture(t *testing.T, ctx context.Context) *vaultFixture {
 	t.Cleanup(func() {
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cleanupCancel()
-		require.NoError(t, docker.DeleteService(cleanupCtx, cloudSecretsServiceID))
-		require.NoError(t, docker.waitServiceRemoved(cleanupCtx, cloudSecretsServiceID))
+		require.NoError(t, docker.Service().Delete(cleanupCtx, cloudSecretsServiceID))
+		require.NoError(t, docker.Service().WaitRemoved(cleanupCtx, cloudSecretsServiceID))
 	})
-	require.NoError(t, docker.WaitServiceHealthy(ctx, cloudSecretsServiceID))
+	require.NoError(t, docker.Service().WaitHealthy(ctx, cloudSecretsServiceID))
 
 	return &vaultFixture{
 		ctx:       ctx,
@@ -133,7 +131,7 @@ func (f *vaultFixture) runCreateScenario(t *testing.T) {
 	t.Helper()
 
 	volumeName := f.runID + "-create-orders"
-	require.NoError(t, f.docker.createVolume(f.ctx, volumeName))
+	require.NoError(t, f.docker.Volume().CreateLocal(f.ctx, volumeName))
 
 	t.Cleanup(func() {
 		f.cleanupScenario(t, volumeName)
@@ -150,7 +148,7 @@ func (f *vaultFixture) runUpdateScenario(t *testing.T) {
 	t.Helper()
 
 	volumeName := f.runID + "-update-orders"
-	require.NoError(t, f.docker.createVolume(f.ctx, volumeName))
+	require.NoError(t, f.docker.Volume().CreateLocal(f.ctx, volumeName))
 
 	t.Cleanup(func() {
 		f.cleanupScenario(t, volumeName)
@@ -188,7 +186,7 @@ func (f *vaultFixture) deployOrdersService(
 ) {
 	t.Helper()
 
-	serviceID, err := f.docker.DeployService(
+	serviceID, err := f.docker.Service().Deploy(
 		f.ctx,
 		ordersServiceSpec(name, helperImage, f.networkID, volumeName, secret),
 	)
@@ -197,11 +195,11 @@ func (f *vaultFixture) deployOrdersService(
 	t.Cleanup(func() {
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cleanupCancel()
-		require.NoError(t, f.docker.DeleteService(cleanupCtx, serviceID))
-		require.NoError(t, f.docker.waitServiceRemoved(cleanupCtx, serviceID))
+		require.NoError(t, f.docker.Service().Delete(cleanupCtx, serviceID))
+		require.NoError(t, f.docker.Service().WaitRemoved(cleanupCtx, serviceID))
 	})
 
-	require.NoError(t, f.docker.WaitServiceHealthy(f.ctx, serviceID))
+	require.NoError(t, f.docker.Service().WaitHealthy(f.ctx, serviceID))
 }
 
 func (f *vaultFixture) verifySharedVolumeValue(
@@ -212,7 +210,7 @@ func (f *vaultFixture) verifySharedVolumeValue(
 ) {
 	t.Helper()
 
-	serviceID, err := f.docker.DeployService(
+	serviceID, err := f.docker.Service().Deploy(
 		f.ctx,
 		verifierServiceSpec(name, helperImage, f.networkID, volumeName, expectedValue),
 	)
@@ -220,11 +218,11 @@ func (f *vaultFixture) verifySharedVolumeValue(
 	t.Cleanup(func() {
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cleanupCancel()
-		require.NoError(t, f.docker.DeleteService(cleanupCtx, serviceID))
+		require.NoError(t, f.docker.Service().Delete(cleanupCtx, serviceID))
 	})
-	require.NoError(t, f.docker.WaitServiceHealthy(f.ctx, serviceID))
-	require.NoError(t, f.docker.DeleteService(f.ctx, serviceID))
-	require.NoError(t, f.docker.waitServiceRemoved(f.ctx, serviceID))
+	require.NoError(t, f.docker.Service().WaitHealthy(f.ctx, serviceID))
+	require.NoError(t, f.docker.Service().Delete(f.ctx, serviceID))
+	require.NoError(t, f.docker.Service().WaitRemoved(f.ctx, serviceID))
 }
 
 func (f *vaultFixture) waitPrimaryDockerSecret(t *testing.T, versionID string) *swarm.Secret {
@@ -238,7 +236,7 @@ func (f *vaultFixture) waitPrimaryDockerSecret(t *testing.T, versionID string) *
 
 	var lastErr error
 	for {
-		secret, err := f.docker.GetSecret(waitCtx, dockerSecretName)
+		secret, err := f.docker.Secret().GetSecret(waitCtx, dockerSecretName)
 		if err == nil && secret.Spec.Labels["external_version_id"] == versionID {
 			return secret
 		}
@@ -272,7 +270,7 @@ func (f *vaultFixture) waitDockerSecretVersion(t *testing.T, versionID string) {
 
 	var lastErr error
 	for {
-		secrets, err := f.docker.ListSecrets(waitCtx, dockerSecretName)
+		secrets, err := f.docker.Secret().ListSecrets(waitCtx, dockerSecretName)
 		if err == nil {
 			for _, secret := range secrets {
 				if secret.Spec.Labels["external_version_id"] == versionID {
@@ -306,15 +304,15 @@ func (f *vaultFixture) cleanupScenario(t *testing.T, volumeName string) {
 
 	require.NoError(t, f.vault.DeleteSecret(ctx, vaultSecretPath))
 	require.NoError(t, deleteSyncedSecrets(ctx, f.docker, dockerSecretName))
-	require.NoError(t, f.docker.deleteVolume(ctx, volumeName))
+	require.NoError(t, f.docker.Volume().Delete(ctx, volumeName))
 }
 
-func deleteSyncedSecrets(ctx context.Context, docker *DockerClient, logicalPath string) error {
+func deleteSyncedSecrets(ctx context.Context, docker *dockertester.Tester, logicalPath string) error {
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
 
 	for {
-		secrets, err := docker.ListSecrets(ctx, logicalPath)
+		secrets, err := docker.Secret().ListSecrets(ctx, logicalPath)
 		if err != nil {
 			return err
 		}
@@ -324,7 +322,7 @@ func deleteSyncedSecrets(ctx context.Context, docker *DockerClient, logicalPath 
 
 		var deleteErr error
 		for _, secret := range secrets {
-			if err = docker.deleteSecret(ctx, secret.ID); err != nil {
+			if err = docker.Secret().Delete(ctx, secret.ID); err != nil {
 				deleteErr = err
 			}
 		}
@@ -340,12 +338,12 @@ func deleteSyncedSecrets(ctx context.Context, docker *DockerClient, logicalPath 
 	}
 }
 
-func deleteSecretWithRetry(ctx context.Context, docker *DockerClient, name string) error {
+func deleteSecretWithRetry(ctx context.Context, docker *dockertester.Tester, name string) error {
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
 
 	for {
-		err := docker.deleteSecret(ctx, name)
+		err := docker.Secret().Delete(ctx, name)
 		if err == nil {
 			return nil
 		}
@@ -358,12 +356,12 @@ func deleteSecretWithRetry(ctx context.Context, docker *DockerClient, name strin
 	}
 }
 
-func requireNoPreexistingSecret(t *testing.T, ctx context.Context, docker *DockerClient, name string) {
+func requireNoPreexistingSecret(t *testing.T, ctx context.Context, docker *dockertester.Tester, name string) {
 	t.Helper()
 
-	secret, err := docker.GetSecret(ctx, name)
+	secret, err := docker.Secret().GetSecret(ctx, name)
 	if err != nil {
-		require.ErrorIs(t, err, errDockerSecretNotFound)
+		require.ErrorIs(t, err, dockertester.ErrSecretNotFound)
 
 		return
 	}
@@ -408,19 +406,4 @@ func waitVaultReady(ctx context.Context, addr string) error {
 		case <-ticker.C:
 		}
 	}
-}
-
-func freeTCPPort() (uint32, error) {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		return 0, fmt.Errorf("allocate tcp port: %w", err)
-	}
-	defer listener.Close()
-
-	addr, ok := listener.Addr().(*net.TCPAddr)
-	if !ok {
-		return 0, fmt.Errorf("unexpected listener address %T", listener.Addr())
-	}
-
-	return uint32(addr.Port), nil
 }
