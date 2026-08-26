@@ -23,18 +23,39 @@ func TestVault(t *testing.T) {
 		t.Skip("set CS_E2E=1 to run Docker Swarm e2e tests")
 	}
 
-	t.Helper()
-
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 
-	fixture := setupVaultFixture(t, ctx)
+	f := setupVaultEnv(t, ctx)
 
-	t.Run("create secret and sync to Docker", fixture.runCreateScenario)
-	t.Run("update secret and sync new Docker version", fixture.runUpdateScenario)
+	t.Run("create secret and sync to Docker", func(t *testing.T) {
+		t.Cleanup(func() {
+			f.cleanupScenario(t)
+		})
+
+		versionID := f.createVaultSecret(t, "test-value")
+		syncedSecret := f.docker.Secret().Wait(f.ctx, t, versionID, dockerSecretLabelMatcher)
+
+		f.assertDockerSecretValue(t, syncedSecret, "test-value")
+	})
+
+	t.Run("update secret and sync new Docker version", func(t *testing.T) {
+		t.Cleanup(func() {
+			f.cleanupScenario(t)
+		})
+
+		initialVersionID := f.createVaultSecret(t, "test-value")
+		syncedSecret := f.docker.Secret().Wait(f.ctx, t, initialVersionID, dockerSecretLabelMatcher)
+
+		f.assertDockerSecretValue(t, syncedSecret, "test-value")
+
+		updatedVersionID := f.createVaultSecret(t, "new-value")
+		updatedSecret := f.docker.Secret().Wait(f.ctx, t, updatedVersionID, dockerSecretLabelMatcher)
+		f.assertDockerSecretValue(t, updatedSecret, "new-value")
+	})
 }
 
-type vaultFixture struct {
+type vaultEnv struct {
 	ctx       context.Context
 	docker    *dockertester.Tester
 	vault     vaultclient.Client
@@ -42,7 +63,7 @@ type vaultFixture struct {
 	runID     string
 }
 
-func setupVaultFixture(t *testing.T, ctx context.Context) *vaultFixture {
+func setupVaultEnv(t *testing.T, ctx context.Context) *vaultEnv {
 	t.Helper()
 
 	docker, err := dockertester.NewTester()
@@ -118,7 +139,7 @@ func setupVaultFixture(t *testing.T, ctx context.Context) *vaultFixture {
 	})
 	require.NoError(t, docker.Service().WaitHealthy(ctx, cloudSecretsServiceID))
 
-	return &vaultFixture{
+	return &vaultEnv{
 		ctx:       ctx,
 		docker:    docker,
 		vault:     vault,
@@ -127,40 +148,10 @@ func setupVaultFixture(t *testing.T, ctx context.Context) *vaultFixture {
 	}
 }
 
-func (f *vaultFixture) runCreateScenario(t *testing.T) {
+func (e *vaultEnv) createVaultSecret(t *testing.T, value string) string {
 	t.Helper()
 
-	t.Cleanup(func() {
-		f.cleanupScenario(t)
-	})
-
-	versionID := f.createVaultSecret(t, "test-value")
-	syncedSecret := f.docker.Secret().Wait(f.ctx, t, versionID, dockerSecretLabelMatcher)
-
-	f.assertDockerSecretValue(t, syncedSecret, "test-value")
-}
-
-func (f *vaultFixture) runUpdateScenario(t *testing.T) {
-	t.Helper()
-
-	t.Cleanup(func() {
-		f.cleanupScenario(t)
-	})
-
-	initialVersionID := f.createVaultSecret(t, "test-value")
-	syncedSecret := f.docker.Secret().Wait(f.ctx, t, initialVersionID, dockerSecretLabelMatcher)
-
-	f.assertDockerSecretValue(t, syncedSecret, "test-value")
-
-	updatedVersionID := f.createVaultSecret(t, "new-value")
-	updatedSecret := f.docker.Secret().Wait(f.ctx, t, updatedVersionID, dockerSecretLabelMatcher)
-	f.assertDockerSecretValue(t, updatedSecret, "new-value")
-}
-
-func (f *vaultFixture) createVaultSecret(t *testing.T, value string) string {
-	t.Helper()
-
-	secret, err := f.vault.CreateSecret(f.ctx, vaultSecretPath, map[string]interface{}{
+	secret, err := e.vault.CreateSecret(e.ctx, vaultSecretPath, map[string]interface{}{
 		vaultSecretKey: value,
 	})
 	require.NoError(t, err)
@@ -170,24 +161,24 @@ func (f *vaultFixture) createVaultSecret(t *testing.T, value string) string {
 	return secret.VersionID
 }
 
-func (f *vaultFixture) assertDockerSecretValue(t *testing.T, secret *swarm.Secret, expectedValue string) {
+func (e *vaultEnv) assertDockerSecretValue(t *testing.T, secret *swarm.Secret, expectedValue string) {
 	t.Helper()
 
-	f.docker.Secret().AssertSecretValue(f.ctx, t, secret, expectedValue)
+	e.docker.Secret().AssertSecretValue(e.ctx, t, secret, expectedValue)
 }
 
 func dockerSecretLabelMatcher(labels map[string]string) bool {
 	return labels["logical_path"] == dockerSecretName
 }
 
-func (f *vaultFixture) cleanupScenario(t *testing.T) {
+func (e *vaultEnv) cleanupScenario(t *testing.T) {
 	t.Helper()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	require.NoError(t, f.vault.DeleteSecret(ctx, vaultSecretPath))
-	require.NoError(t, f.docker.Secret().DeleteByLabels(ctx, map[string]string{
+	require.NoError(t, e.vault.DeleteSecret(ctx, vaultSecretPath))
+	require.NoError(t, e.docker.Secret().DeleteByLabels(ctx, map[string]string{
 		"logical_path": dockerSecretName,
 	}))
 }
