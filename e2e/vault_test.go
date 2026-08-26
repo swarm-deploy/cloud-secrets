@@ -17,7 +17,7 @@ import (
 	"github.com/swarm-deploy/dockertester"
 )
 
-func TestVault(t *testing.T) {
+func TestVaultWithStaticToken(t *testing.T) {
 	if os.Getenv("CS_E2E") != "1" {
 		t.Skip("set CS_E2E=1 to run Docker Swarm e2e tests")
 	}
