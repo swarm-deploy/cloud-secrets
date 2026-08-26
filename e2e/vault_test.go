@@ -12,7 +12,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/moby/moby/api/types/swarm"
 	"github.com/stretchr/testify/require"
 	vaultclient "github.com/swarm-deploy/cloud-secrets/internal/providers/vault/api"
 	"github.com/swarm-deploy/dockertester"
@@ -36,7 +35,7 @@ func TestVault(t *testing.T) {
 		versionID := f.createVaultSecret(t, "test-value")
 		syncedSecret := f.docker.Secret().Wait(f.ctx, t, versionID, dockerSecretLabelMatcher)
 
-		f.assertDockerSecretValue(t, syncedSecret, "test-value")
+		f.docker.Secret().AssertSecretValue(ctx, t, syncedSecret, "test-value")
 	})
 
 	t.Run("update secret and sync new Docker version", func(t *testing.T) {
@@ -47,11 +46,11 @@ func TestVault(t *testing.T) {
 		initialVersionID := f.createVaultSecret(t, "test-value")
 		syncedSecret := f.docker.Secret().Wait(f.ctx, t, initialVersionID, dockerSecretLabelMatcher)
 
-		f.assertDockerSecretValue(t, syncedSecret, "test-value")
+		f.docker.Secret().AssertSecretValue(ctx, t, syncedSecret, "test-value")
 
 		updatedVersionID := f.createVaultSecret(t, "new-value")
 		updatedSecret := f.docker.Secret().Wait(f.ctx, t, updatedVersionID, dockerSecretLabelMatcher)
-		f.assertDockerSecretValue(t, updatedSecret, "new-value")
+		f.docker.Secret().AssertSecretValue(ctx, t, updatedSecret, "new-value")
 	})
 }
 
@@ -159,12 +158,6 @@ func (e *vaultEnv) createVaultSecret(t *testing.T, value string) string {
 	require.NotEmpty(t, secret.VersionID, "Vault secret version for %s", externalSecretPath)
 
 	return secret.VersionID
-}
-
-func (e *vaultEnv) assertDockerSecretValue(t *testing.T, secret *swarm.Secret, expectedValue string) {
-	t.Helper()
-
-	e.docker.Secret().AssertSecretValue(e.ctx, t, secret, expectedValue)
 }
 
 func dockerSecretLabelMatcher(labels map[string]string) bool {
