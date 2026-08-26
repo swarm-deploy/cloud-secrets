@@ -4,22 +4,29 @@ import (
 	"github.com/moby/moby/api/types/mount"
 	dockernetwork "github.com/moby/moby/api/types/network"
 	"github.com/moby/moby/api/types/swarm"
-	"github.com/swarm-deploy/dockertester"
 )
 
 const (
-	vaultRootToken      = "test-token" //nolint:gosec // e2e Vault dev token.
-	vaultPolicyName     = "cloud-secrets"
-	vaultMountPath      = "secret"
-	vaultAuthSecretName = "cs-vault-auth-token" //nolint:gosec // test secret name, not a credential.
-	vaultImage          = "hashicorp/vault:1.18"
-	cloudSecretsImage   = "swarmdeployorg/cloud-secrets:local"
+	vaultRootToken                     = "test-token" //nolint:gosec // e2e Vault dev token.
+	vaultPolicyName                    = "cloud-secrets"
+	vaultAppRoleName                   = "cloud-secrets"
+	vaultMountPath                     = "secret"
+	vaultAuthSecretName                = "cs-vault-auth-token" //nolint:gosec // test secret name, not a credential.
+	vaultAuthAppRoleRoleIDSecretName   = "cs-vault-auth-approle-role-id"
+	vaultAuthAppRoleSecretIDSecretName = "cs-vault-auth-approle-secret-id" //nolint:gosec // test secret name, not a credential.
+	vaultImage                         = "hashicorp/vault:1.18"
+	cloudSecretsImage                  = "swarmdeployorg/cloud-secrets:local"
 	// Vault KV data at "path/key" is normalized to the Docker secret name by the engine.
 	externalSecretPath = "orders/db-dsn"
 	vaultSecretPath    = "orders"
 	vaultSecretKey     = "db-dsn"
 	dockerSecretName   = "orders-db-dsn"
 )
+
+type cloudSecretsVaultAuthConfig struct {
+	env     []string
+	secrets []*swarm.SecretReference
+}
 
 func oneReplica() swarm.ServiceMode {
 	replicas := uint64(1)
@@ -61,75 +68,5 @@ func tcpPort(target, published uint32) swarm.PortConfig {
 		TargetPort:    target,
 		PublishedPort: published,
 		PublishMode:   swarm.PortConfigPublishModeIngress,
-	}
-}
-
-func vaultServiceSpec(name string, image string, networkID string, publishedPort uint32) swarm.ServiceSpec {
-	return swarm.ServiceSpec{
-		Annotations: swarm.Annotations{
-			Name: name,
-		},
-		TaskTemplate: swarm.TaskSpec{
-			ContainerSpec: &swarm.ContainerSpec{
-				Image: image,
-				Command: []string{
-					"vault",
-				},
-				Args: []string{
-					"server",
-					"-dev",
-					"-dev-root-token-id=" + vaultRootToken,
-					"-dev-listen-address=0.0.0.0:8200",
-				},
-				Env: []string{
-					"VAULT_ADDR=http://127.0.0.1:8200",
-					"VAULT_TOKEN=" + vaultRootToken,
-				},
-			},
-			RestartPolicy: &swarm.RestartPolicy{
-				Condition: swarm.RestartPolicyConditionAny,
-			},
-			Placement: managerPlacement(),
-			Networks:  networkAttachment(networkID, "vault"),
-		},
-		Mode: oneReplica(),
-		EndpointSpec: &swarm.EndpointSpec{
-			Ports: []swarm.PortConfig{
-				tcpPort(8200, publishedPort),
-			},
-		},
-	}
-}
-
-func cloudSecretsServiceSpec(name string, image string, networkID string, authSecretID string) swarm.ServiceSpec {
-	return swarm.ServiceSpec{
-		Annotations: swarm.Annotations{
-			Name: name,
-		},
-		TaskTemplate: swarm.TaskSpec{
-			ContainerSpec: &swarm.ContainerSpec{
-				Image: image,
-				Env: []string{
-					"CS_PROVIDER=vault",
-					"CS_REFRESH_INTERVAL=1s",
-					"CS_LOG_LEVEL=debug",
-					"VAULT_ADDR=http://vault:8200",
-					"VAULT_AUTH_TOKEN=/run/secrets/" + vaultAuthSecretName,
-					"VAULT_MOUNT_PATH=" + vaultMountPath,
-				},
-				Mounts: []mount.Mount{
-					bindMount("/var/run/docker.sock", "/var/run/docker.sock", true),
-				},
-				Secrets: []*swarm.SecretReference{
-					dockertester.SecretRef(vaultAuthSecretName, vaultAuthSecretName, authSecretID),
-				},
-			},
-			RestartPolicy: &swarm.RestartPolicy{
-				Condition: swarm.RestartPolicyConditionAny,
-			},
-			Placement: managerPlacement(),
-			Networks:  networkAttachment(networkID),
-		},
-		Mode: oneReplica(),
 	}
 }

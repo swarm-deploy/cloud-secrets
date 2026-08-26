@@ -34,6 +34,7 @@ func NewAppRoleAuthenticator(
 	return &AppRoleAuthenticator{
 		appRole: appRole,
 		client:  client,
+		now:     time.Now,
 	}, nil
 }
 

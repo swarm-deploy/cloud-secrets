@@ -179,7 +179,7 @@ linters:
       - third_party$
       - builtin$
       - examples$
-      - e2e$
+      - e2e/
 issues:
   max-same-issues: 50
 formatters:

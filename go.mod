@@ -20,7 +20,7 @@ require (
 	github.com/moby/moby/client v0.5.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/stretchr/testify v1.11.1
-	github.com/swarm-deploy/dockertester v0.0.0-20260826193542-6adcf801e5c1
+	github.com/swarm-deploy/dockertester v0.0.0-20260826201240-c97b5a4abfe7
 	go.uber.org/mock v0.6.0
 	google.golang.org/grpc v1.83.0
 )
@@ -77,5 +77,3 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/swarm-deploy/dockertester => ./dockertester
