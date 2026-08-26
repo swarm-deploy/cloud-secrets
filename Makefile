@@ -20,5 +20,5 @@ build:
 
 .PHONY: e2e
 e2e:
-	docker build . -t swarmdeployorg/cloud-secrets:local
+	#docker build . -t swarmdeployorg/cloud-secrets:local
 	CS_E2E=1 go test ./e2e/...

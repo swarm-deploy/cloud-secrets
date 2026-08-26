@@ -53,8 +53,8 @@ func setupVaultFixture(t *testing.T, ctx context.Context) *vaultFixture {
 
 	docker.Swarm().RequireSwarmMode(ctx, t)
 
-	requireNoPreexistingSecret(t, ctx, docker, vaultAuthSecretName)
-	requireNoPreexistingSecret(t, ctx, docker, dockerSecretName)
+	docker.Secret().RequireNotExists(ctx, t, vaultAuthSecretName)
+	docker.Secret().RequireNotExists(ctx, t, dockerSecretName)
 
 	runID := "cs-e2e-" + strconv.FormatInt(time.Now().UnixNano(), 36)
 
@@ -100,7 +100,7 @@ func setupVaultFixture(t *testing.T, ctx context.Context) *vaultFixture {
 	t.Cleanup(func() {
 		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cleanupCancel()
-		require.NoError(t, deleteSecretWithRetry(cleanupCtx, docker, vaultAuthSecretName))
+		require.NoError(t, docker.Secret().DeleteWithRetry(cleanupCtx, vaultAuthSecretName))
 	})
 
 	time.Sleep(500 * time.Millisecond)
@@ -130,39 +130,31 @@ func setupVaultFixture(t *testing.T, ctx context.Context) *vaultFixture {
 func (f *vaultFixture) runCreateScenario(t *testing.T) {
 	t.Helper()
 
-	volumeName := f.runID + "-create-orders"
-	require.NoError(t, f.docker.Volume().CreateLocal(f.ctx, volumeName))
-
 	t.Cleanup(func() {
-		f.cleanupScenario(t, volumeName)
+		f.cleanupScenario(t)
 	})
 
 	versionID := f.createVaultSecret(t, "test-value")
-	syncedSecret := f.waitPrimaryDockerSecret(t, versionID)
+	syncedSecret := f.docker.Secret().Wait(f.ctx, t, versionID, dockerSecretLabelMatcher)
 
-	f.deployOrdersService(t, f.runID+"-orders-create", volumeName, syncedSecret)
-	f.verifySharedVolumeValue(t, f.runID+"-verify-create", volumeName, "test-value")
+	f.assertDockerSecretValue(t, syncedSecret, "test-value")
 }
 
 func (f *vaultFixture) runUpdateScenario(t *testing.T) {
 	t.Helper()
 
-	volumeName := f.runID + "-update-orders"
-	require.NoError(t, f.docker.Volume().CreateLocal(f.ctx, volumeName))
-
 	t.Cleanup(func() {
-		f.cleanupScenario(t, volumeName)
+		f.cleanupScenario(t)
 	})
 
 	initialVersionID := f.createVaultSecret(t, "test-value")
-	syncedSecret := f.waitPrimaryDockerSecret(t, initialVersionID)
+	syncedSecret := f.docker.Secret().Wait(f.ctx, t, initialVersionID, dockerSecretLabelMatcher)
 
-	f.deployOrdersService(t, f.runID+"-orders-update", volumeName, syncedSecret)
-	f.verifySharedVolumeValue(t, f.runID+"-verify-initial", volumeName, "test-value")
+	f.assertDockerSecretValue(t, syncedSecret, "test-value")
 
 	updatedVersionID := f.createVaultSecret(t, "new-value")
-	f.waitDockerSecretVersion(t, updatedVersionID)
-	f.verifySharedVolumeValue(t, f.runID+"-verify-updated", volumeName, "new-value")
+	updatedSecret := f.docker.Secret().Wait(f.ctx, t, updatedVersionID, dockerSecretLabelMatcher)
+	f.assertDockerSecretValue(t, updatedSecret, "new-value")
 }
 
 func (f *vaultFixture) createVaultSecret(t *testing.T, value string) string {
@@ -178,195 +170,26 @@ func (f *vaultFixture) createVaultSecret(t *testing.T, value string) string {
 	return secret.VersionID
 }
 
-func (f *vaultFixture) deployOrdersService(
-	t *testing.T,
-	name string,
-	volumeName string,
-	secret *swarm.Secret,
-) {
+func (f *vaultFixture) assertDockerSecretValue(t *testing.T, secret *swarm.Secret, expectedValue string) {
 	t.Helper()
 
-	serviceID, err := f.docker.Service().Deploy(
-		f.ctx,
-		ordersServiceSpec(name, helperImage, f.networkID, volumeName, secret),
-	)
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cleanupCancel()
-		require.NoError(t, f.docker.Service().Delete(cleanupCtx, serviceID))
-		require.NoError(t, f.docker.Service().WaitRemoved(cleanupCtx, serviceID))
-	})
-
-	require.NoError(t, f.docker.Service().WaitHealthy(f.ctx, serviceID))
+	f.docker.Secret().AssertSecretValue(f.ctx, t, secret, expectedValue)
 }
 
-func (f *vaultFixture) verifySharedVolumeValue(
-	t *testing.T,
-	name string,
-	volumeName string,
-	expectedValue string,
-) {
-	t.Helper()
-
-	serviceID, err := f.docker.Service().Deploy(
-		f.ctx,
-		verifierServiceSpec(name, helperImage, f.networkID, volumeName, expectedValue),
-	)
-	require.NoError(t, err)
-	t.Cleanup(func() {
-		cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
-		defer cleanupCancel()
-		require.NoError(t, f.docker.Service().Delete(cleanupCtx, serviceID))
-	})
-	require.NoError(t, f.docker.Service().WaitHealthy(f.ctx, serviceID))
-	require.NoError(t, f.docker.Service().Delete(f.ctx, serviceID))
-	require.NoError(t, f.docker.Service().WaitRemoved(f.ctx, serviceID))
+func dockerSecretLabelMatcher(labels map[string]string) bool {
+	return labels["logical_path"] == dockerSecretName
 }
 
-func (f *vaultFixture) waitPrimaryDockerSecret(t *testing.T, versionID string) *swarm.Secret {
-	t.Helper()
-
-	waitCtx, cancel := context.WithTimeout(f.ctx, 20*time.Second)
-	defer cancel()
-
-	ticker := time.NewTicker(500 * time.Millisecond)
-	defer ticker.Stop()
-
-	var lastErr error
-	for {
-		secret, err := f.docker.Secret().GetSecret(waitCtx, dockerSecretName)
-		if err == nil && secret.Spec.Labels["external_version_id"] == versionID {
-			return secret
-		}
-		if err != nil {
-			lastErr = err
-		} else {
-			lastErr = fmt.Errorf("secret %q has external_version_id=%q, want %q",
-				dockerSecretName,
-				secret.Spec.Labels["external_version_id"],
-				versionID,
-			)
-		}
-
-		select {
-		case <-waitCtx.Done():
-			require.NoError(t, lastErr)
-			require.NoError(t, waitCtx.Err())
-		case <-ticker.C:
-		}
-	}
-}
-
-func (f *vaultFixture) waitDockerSecretVersion(t *testing.T, versionID string) {
-	t.Helper()
-
-	waitCtx, cancel := context.WithTimeout(f.ctx, 20*time.Second)
-	defer cancel()
-
-	ticker := time.NewTicker(500 * time.Millisecond)
-	defer ticker.Stop()
-
-	var lastErr error
-	for {
-		secrets, err := f.docker.Secret().ListSecrets(waitCtx, dockerSecretName)
-		if err == nil {
-			for _, secret := range secrets {
-				if secret.Spec.Labels["external_version_id"] == versionID {
-					return
-				}
-			}
-
-			lastErr = fmt.Errorf(
-				"no secret with logical_path=%q and external_version_id=%q",
-				dockerSecretName,
-				versionID,
-			)
-		} else {
-			lastErr = err
-		}
-
-		select {
-		case <-waitCtx.Done():
-			require.NoError(t, lastErr)
-			require.NoError(t, waitCtx.Err())
-		case <-ticker.C:
-		}
-	}
-}
-
-func (f *vaultFixture) cleanupScenario(t *testing.T, volumeName string) {
+func (f *vaultFixture) cleanupScenario(t *testing.T) {
 	t.Helper()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
 	require.NoError(t, f.vault.DeleteSecret(ctx, vaultSecretPath))
-	require.NoError(t, deleteSyncedSecrets(ctx, f.docker, dockerSecretName))
-	require.NoError(t, f.docker.Volume().Delete(ctx, volumeName))
-}
-
-func deleteSyncedSecrets(ctx context.Context, docker *dockertester.Tester, logicalPath string) error {
-	ticker := time.NewTicker(500 * time.Millisecond)
-	defer ticker.Stop()
-
-	for {
-		secrets, err := docker.Secret().ListSecrets(ctx, logicalPath)
-		if err != nil {
-			return err
-		}
-		if len(secrets) == 0 {
-			return nil
-		}
-
-		var deleteErr error
-		for _, secret := range secrets {
-			if err = docker.Secret().Delete(ctx, secret.ID); err != nil {
-				deleteErr = err
-			}
-		}
-		if deleteErr == nil {
-			continue
-		}
-
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("delete synced secrets for %q: %w: %v", logicalPath, ctx.Err(), deleteErr)
-		case <-ticker.C:
-		}
-	}
-}
-
-func deleteSecretWithRetry(ctx context.Context, docker *dockertester.Tester, name string) error {
-	ticker := time.NewTicker(500 * time.Millisecond)
-	defer ticker.Stop()
-
-	for {
-		err := docker.Secret().Delete(ctx, name)
-		if err == nil {
-			return nil
-		}
-
-		select {
-		case <-ctx.Done():
-			return fmt.Errorf("delete secret %q: %w: %v", name, ctx.Err(), err)
-		case <-ticker.C:
-		}
-	}
-}
-
-func requireNoPreexistingSecret(t *testing.T, ctx context.Context, docker *dockertester.Tester, name string) {
-	t.Helper()
-
-	secret, err := docker.Secret().GetSecret(ctx, name)
-	if err != nil {
-		require.ErrorIs(t, err, dockertester.ErrSecretNotFound)
-
-		return
-	}
-
-	t.Fatalf("Docker secret %q already exists with id %q; remove it before running e2e tests", name, secret.ID)
+	require.NoError(t, f.docker.Secret().DeleteByLabels(ctx, map[string]string{
+		"logical_path": dockerSecretName,
+	}))
 }
 
 func waitVaultReady(ctx context.Context, addr string) error {
