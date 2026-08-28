@@ -1,5 +1,7 @@
 # Using HashiCorp Vault (KV v2)
 
+[На Русском](./usage_vault_ru.md)
+
 How Vault Keys Map to Swarm Secrets:
 - Each key inside one Vault secret (`data`) is synchronized as a separate Docker Swarm secret.
 - This rule always applies, even when a Vault secret has only one key.
