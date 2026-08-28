@@ -241,6 +241,10 @@ func (c *VaultCommand) vaultAddr(exec *framework.Execution) (*url.URL, error) {
 		return nil, errors.New("vault address not provided in command arguments or VAULT_ADDR")
 	}
 
+	if !strings.HasPrefix(addr, "http://") && !strings.HasPrefix(addr, "https://") {
+		addr = "http://" + addr
+	}
+
 	parsed, err := url.Parse(addr)
 	if err != nil {
 		return nil, fmt.Errorf("parse Vault address %q: %w", addr, err)
