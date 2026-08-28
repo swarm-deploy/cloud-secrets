@@ -80,7 +80,8 @@ func (app *Application) createScripts(ctx context.Context, out output.OutputInte
 
 		for i, argument := range definition.Arguments {
 			args[i] = go_console.Argument{
-				Name: argument.Name,
+				Name:        argument.Name,
+				Description: argument.Description,
 			}
 		}
 

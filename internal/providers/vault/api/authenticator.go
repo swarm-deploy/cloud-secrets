@@ -13,3 +13,25 @@ type AppRoleConfig struct {
 	// SecretID is Vault AppRole secret_id bootstrap credential.
 	SecretID string `env:"SECRET_ID,file" json:"-"`
 }
+
+type AuthMethod string
+
+var (
+	AuthMethodStatic  AuthMethod = "static"
+	AuthMethodAppRole AuthMethod = "approle"
+)
+
+func (m AuthMethod) Title() string {
+	switch m {
+	case AuthMethodStatic:
+		return "Static Token"
+	case AuthMethodAppRole:
+		return "AppRole"
+	default:
+		return "invalid"
+	}
+}
+
+func (m AuthMethod) Valid() bool {
+	return m == AuthMethodStatic || m == AuthMethodAppRole
+}

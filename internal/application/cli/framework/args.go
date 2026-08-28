@@ -1,7 +1,8 @@
 package framework
 
 type Argument struct {
-	Name string
+	Name        string
+	Description string
 }
 
 type Option struct {
