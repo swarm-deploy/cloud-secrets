@@ -11,7 +11,6 @@ require (
 	github.com/cloudru-tech/iam-sdk v1.0.4
 	github.com/cloudru-tech/secret-manager-sdk v1.1.1
 	github.com/containerd/errdefs v1.0.0
-	github.com/golang/mock v1.6.0
 	github.com/google/uuid v1.6.0
 	github.com/hashicorp/vault/api v1.22.0
 	github.com/hashicorp/vault/api/auth/approle v0.12.0

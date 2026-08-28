@@ -53,28 +53,23 @@ func (c *HttpClient) DeleteSecret(ctx context.Context, path string) error {
 	return nil
 }
 
-func (c *HttpClient) CreateACLPolicy(ctx context.Context, name string) error {
-	name = strings.TrimSpace(name)
-	if name == "" {
+type CreateACLPolicyRequest struct {
+	Name  string
+	Rules string
+}
+
+func (c *HttpClient) CreateACLPolicy(ctx context.Context, req CreateACLPolicyRequest) error {
+	req.Name = strings.TrimSpace(req.Name)
+	if req.Name == "" {
 		return fmt.Errorf("policy name is empty")
 	}
+	req.Rules = strings.TrimSpace(req.Rules)
+	if req.Rules == "" {
+		return fmt.Errorf("policy rules are empty")
+	}
 
-	rules := fmt.Sprintf(`
-path "%s/metadata" {
-  capabilities = ["list"]
-}
-
-path "%s/metadata/*" {
-  capabilities = ["read", "list"]
-}
-
-path "%s/data/*" {
-  capabilities = ["read"]
-}
-`, c.mountPath, c.mountPath, c.mountPath)
-
-	if err := c.client.Sys().PutPolicyWithContext(ctx, name, strings.TrimSpace(rules)); err != nil {
-		return fmt.Errorf("create ACL policy %q: %w", name, err)
+	if err := c.client.Sys().PutPolicyWithContext(ctx, req.Name, req.Rules); err != nil {
+		return fmt.Errorf("create ACL policy %q: %w", req.Name, err)
 	}
 
 	return nil

@@ -73,6 +73,20 @@ func (e *Execution) AskPassword(prompt string) (string, error) {
 	return password, nil
 }
 
+func (e *Execution) Ask(prompt string, defaultAnswer string) (string, error) {
+	q := question.NewQuestion(prompt)
+	if defaultAnswer != "" {
+		q.SetDefaultAnswer(defaultAnswer)
+	}
+
+	answer := e.Question.Ask(q)
+	if answer == "" {
+		return "", errors.New("answer not provided")
+	}
+
+	return answer, nil
+}
+
 func (e *Execution) Confirm(prompt string) bool {
 	answer := e.Question.Ask(
 		question.

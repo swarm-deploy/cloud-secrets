@@ -115,7 +115,22 @@ func setupVaultEnv(t *testing.T, ctx context.Context, setupAuth vaultAuthSetup) 
 	})
 	require.NoError(t, err)
 
-	require.NoError(t, vault.CreateACLPolicy(ctx, vaultPolicyName))
+	require.NoError(t, vault.CreateACLPolicy(ctx, vaultclient.CreateACLPolicyRequest{
+		Name: vaultPolicyName,
+		Rules: fmt.Sprintf(`
+path "%s/metadata" {
+  capabilities = ["list"]
+}
+
+path "%s/metadata/*" {
+  capabilities = ["read", "list"]
+}
+
+path "%s/data/*" {
+  capabilities = ["read"]
+}
+`, vaultMountPath, vaultMountPath, vaultMountPath),
+	}))
 
 	authConfig := setupAuth(t, ctx, docker, vault, *parsedVaultAddr)
 

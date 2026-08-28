@@ -6,6 +6,8 @@ import (
 	"os"
 
 	go_console "github.com/DrSmithFr/go-console"
+	argumentpkg "github.com/DrSmithFr/go-console/input/argument"
+	"github.com/DrSmithFr/go-console/input/option"
 	"github.com/DrSmithFr/go-console/output"
 	"github.com/DrSmithFr/go-console/question"
 	dock "github.com/moby/moby/client"
@@ -59,6 +61,8 @@ func (app *Application) createScripts(ctx context.Context, out output.OutputInte
 
 	commandRunner := func(command framework.Command) func(script *go_console.Script) go_console.ExitCode {
 		return func(script *go_console.Script) go_console.ExitCode {
+			script.Input.SetInteractive(script.Input.Option("no-interaction") != option.Defined)
+
 			err := command.Run(ctx, &framework.Execution{
 				Script:   script,
 				Question: question.NewHelper(os.Stdin, out),
@@ -81,6 +85,7 @@ func (app *Application) createScripts(ctx context.Context, out output.OutputInte
 		for i, argument := range definition.Arguments {
 			args[i] = go_console.Argument{
 				Name:        argument.Name,
+				Value:       argumentpkg.Optional,
 				Description: argument.Description,
 			}
 		}
