@@ -41,7 +41,7 @@ func TestVaultCommandRunAppRoleAlreadyEnabled(t *testing.T) {
 	gomock.InOrder(
 		vault.EXPECT().AppRoleAuthEnabled(ctx).Return(true, nil),
 		vault.EXPECT().CreateACLPolicy(ctx, NewCloudSecretsACLPolicyRequest(vaultPolicyName, "prod")).Return(nil),
-		vault.EXPECT().CreateAppRole(ctx, vaultAppRoleName, vaultPolicyName).Return(nil),
+		vault.EXPECT().CreateAppRole(ctx, NewCloudSecretsAppRoleRequest(vaultAppRoleName, vaultPolicyName)).Return(nil),
 		vault.EXPECT().ReadAppRoleRoleID(ctx, vaultAppRoleName).Return("role-id", nil),
 		vault.EXPECT().CreateAppRoleSecretID(ctx, vaultAppRoleName).Return("generated-sensitive-value", nil),
 	)
@@ -81,6 +81,17 @@ path "prod/data/*" {
 }`, strings.TrimSpace(req.Rules))
 }
 
+func TestNewCloudSecretsAppRoleRequest(t *testing.T) {
+	req := NewCloudSecretsAppRoleRequest("cloud-secrets", "cloud-secrets-policy")
+
+	require.Equal(t, "cloud-secrets", req.Name)
+	require.Equal(t, []string{"cloud-secrets-policy"}, req.TokenPolicies)
+	require.Equal(t, "1h", req.TokenTTL)
+	require.Equal(t, "4h", req.TokenMaxTTL)
+	require.Equal(t, "0", req.SecretIDTTL)
+	require.Zero(t, req.SecretIDNumUses)
+}
+
 func TestVaultCommandRunAppRoleEnablesAuthWhenMissing(t *testing.T) {
 	ctx := context.Background()
 	engineCtrl := gomock.NewController(t)
@@ -106,7 +117,7 @@ func TestVaultCommandRunAppRoleEnablesAuthWhenMissing(t *testing.T) {
 			vaultPolicyName,
 			vaultDefaultMountPath,
 		)).Return(nil),
-		vault.EXPECT().CreateAppRole(ctx, vaultAppRoleName, vaultPolicyName).Return(nil),
+		vault.EXPECT().CreateAppRole(ctx, NewCloudSecretsAppRoleRequest(vaultAppRoleName, vaultPolicyName)).Return(nil),
 		vault.EXPECT().ReadAppRoleRoleID(ctx, vaultAppRoleName).Return("role-id", nil),
 		vault.EXPECT().CreateAppRoleSecretID(ctx, vaultAppRoleName).Return("generated-sensitive-value", nil),
 	)
@@ -166,7 +177,7 @@ func TestVaultCommandRunAppRoleDockerSecretCreationFailure(t *testing.T) {
 			vaultPolicyName,
 			vaultDefaultMountPath,
 		)).Return(nil),
-		vault.EXPECT().CreateAppRole(ctx, vaultAppRoleName, vaultPolicyName).Return(nil),
+		vault.EXPECT().CreateAppRole(ctx, NewCloudSecretsAppRoleRequest(vaultAppRoleName, vaultPolicyName)).Return(nil),
 		vault.EXPECT().ReadAppRoleRoleID(ctx, vaultAppRoleName).Return("role-id", nil),
 		vault.EXPECT().CreateAppRoleSecretID(ctx, vaultAppRoleName).Return("generated-sensitive-value", nil),
 	)

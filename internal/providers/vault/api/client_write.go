@@ -53,11 +53,6 @@ func (c *HttpClient) DeleteSecret(ctx context.Context, path string) error {
 	return nil
 }
 
-type CreateACLPolicyRequest struct {
-	Name  string
-	Rules string
-}
-
 func (c *HttpClient) CreateACLPolicy(ctx context.Context, req CreateACLPolicyRequest) error {
 	req.Name = strings.TrimSpace(req.Name)
 	if req.Name == "" {

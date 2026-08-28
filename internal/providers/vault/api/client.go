@@ -116,7 +116,7 @@ func (c *HttpClient) ListKeys(ctx context.Context, path string) ([]string, error
 	}
 }
 
-func (c *HttpClient) Get(ctx context.Context, path, key string) (*Secret, error) {
+func (c *HttpClient) GetSecret(ctx context.Context, path, key string) (*Secret, error) {
 	path = strings.Trim(path, "/")
 
 	secret, err := c.kv.Get(ctx, path)

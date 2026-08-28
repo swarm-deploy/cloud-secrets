@@ -38,25 +38,16 @@ func (c *HttpClient) EnableAppRoleAuth(ctx context.Context) error {
 	return nil
 }
 
-func (c *HttpClient) CreateAppRole(ctx context.Context, name string, policyName string) error {
-	name = strings.TrimSpace(name)
-	policyName = strings.TrimSpace(policyName)
-	if name == "" {
-		return fmt.Errorf("appRole name is empty")
-	}
-	if policyName == "" {
-		return fmt.Errorf("policy name is empty")
-	}
-
-	_, err := c.client.Logical().WriteWithContext(ctx, appRolePath(name), map[string]interface{}{
-		"token_policies":     []string{policyName},
-		"token_ttl":          "1h",
-		"token_max_ttl":      "4h",
-		"secret_id_ttl":      "0",
-		"secret_id_num_uses": 0,
+func (c *HttpClient) CreateAppRole(ctx context.Context, req CreateAppRoleRequest) error {
+	_, err := c.client.Logical().WriteWithContext(ctx, appRolePath(req.Name), map[string]interface{}{
+		"token_policies":     req.TokenPolicies,
+		"token_ttl":          req.TokenTTL,
+		"token_max_ttl":      req.TokenMaxTTL,
+		"secret_id_ttl":      req.SecretIDTTL,
+		"secret_id_num_uses": req.SecretIDNumUses,
 	})
 	if err != nil {
-		return fmt.Errorf("configure Vault AppRole %q: %w", name, err)
+		return fmt.Errorf("configure Vault AppRole %q: %w", req.Name, err)
 	}
 
 	return nil

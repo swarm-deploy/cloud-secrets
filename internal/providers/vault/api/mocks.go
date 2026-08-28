@@ -70,17 +70,17 @@ func (mr *MockClientMockRecorder) CreateACLPolicy(ctx, req any) *gomock.Call {
 }
 
 // CreateAppRole mocks base method.
-func (m *MockClient) CreateAppRole(ctx context.Context, name, policyName string) error {
+func (m *MockClient) CreateAppRole(ctx context.Context, req CreateAppRoleRequest) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "CreateAppRole", ctx, name, policyName)
+	ret := m.ctrl.Call(m, "CreateAppRole", ctx, req)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
 // CreateAppRole indicates an expected call of CreateAppRole.
-func (mr *MockClientMockRecorder) CreateAppRole(ctx, name, policyName any) *gomock.Call {
+func (mr *MockClientMockRecorder) CreateAppRole(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAppRole", reflect.TypeOf((*MockClient)(nil).CreateAppRole), ctx, name, policyName)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateAppRole", reflect.TypeOf((*MockClient)(nil).CreateAppRole), ctx, req)
 }
 
 // CreateAppRoleSecretID mocks base method.
@@ -156,19 +156,19 @@ func (mr *MockClientMockRecorder) EnableAppRoleAuth(ctx any) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "EnableAppRoleAuth", reflect.TypeOf((*MockClient)(nil).EnableAppRoleAuth), ctx)
 }
 
-// Get mocks base method.
-func (m *MockClient) Get(ctx context.Context, path, key string) (*Secret, error) {
+// GetSecret mocks base method.
+func (m *MockClient) GetSecret(ctx context.Context, path, key string) (*Secret, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Get", ctx, path, key)
+	ret := m.ctrl.Call(m, "GetSecret", ctx, path, key)
 	ret0, _ := ret[0].(*Secret)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Get indicates an expected call of Get.
-func (mr *MockClientMockRecorder) Get(ctx, path, key any) *gomock.Call {
+// GetSecret indicates an expected call of GetSecret.
+func (mr *MockClientMockRecorder) GetSecret(ctx, path, key any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Get", reflect.TypeOf((*MockClient)(nil).Get), ctx, path, key)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecret", reflect.TypeOf((*MockClient)(nil).GetSecret), ctx, path, key)
 }
 
 // ListKeys mocks base method.

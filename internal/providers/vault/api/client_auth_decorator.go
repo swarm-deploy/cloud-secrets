@@ -19,13 +19,13 @@ func (d *AuthenticatedClient) ListKeys(ctx context.Context, path string) ([]stri
 	return d.client.ListKeys(ctx, path)
 }
 
-func (d *AuthenticatedClient) Get(ctx context.Context, path, key string) (*Secret, error) {
+func (d *AuthenticatedClient) GetSecret(ctx context.Context, path, key string) (*Secret, error) {
 	err := d.authenticator.Authenticate(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("authenticate: %w", err)
 	}
 
-	return d.client.Get(ctx, path, key)
+	return d.client.GetSecret(ctx, path, key)
 }
 
 func (d *AuthenticatedClient) CreateSecret(
@@ -80,12 +80,12 @@ func (d *AuthenticatedClient) EnableAppRoleAuth(ctx context.Context) error {
 	return d.client.EnableAppRoleAuth(ctx)
 }
 
-func (d *AuthenticatedClient) CreateAppRole(ctx context.Context, name string, policyName string) error {
+func (d *AuthenticatedClient) CreateAppRole(ctx context.Context, req CreateAppRoleRequest) error {
 	if err := d.authenticator.Authenticate(ctx); err != nil {
 		return fmt.Errorf("authenticate: %w", err)
 	}
 
-	return d.client.CreateAppRole(ctx, name, policyName)
+	return d.client.CreateAppRole(ctx, req)
 }
 
 func (d *AuthenticatedClient) ReadAppRoleRoleID(ctx context.Context, name string) (string, error) {

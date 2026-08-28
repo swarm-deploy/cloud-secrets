@@ -44,7 +44,7 @@ func (p *Provider) GetSecretPayload(ctx context.Context, path string) ([]byte, e
 		return nil, fmt.Errorf("invalid secret path %q: %w", path, err)
 	}
 
-	secret, err := p.client.Get(ctx, sp.Path, sp.Key)
+	secret, err := p.client.GetSecret(ctx, sp.Path, sp.Key)
 	if err != nil {
 		return nil, fmt.Errorf("read parent secret %q for key %q: %w", sp.Path, sp.Key, err)
 	}
@@ -80,7 +80,7 @@ func (p *Provider) ListSecrets(ctx context.Context) (map[string]contracts.Secret
 			}
 
 			fullPath := joinPath(path, key)
-			secret, getErr := p.client.Get(ctx, fullPath, "")
+			secret, getErr := p.client.GetSecret(ctx, fullPath, "")
 			if getErr != nil {
 				return nil, fmt.Errorf("read secret %q: %w", fullPath, getErr)
 			}

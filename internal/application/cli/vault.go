@@ -193,7 +193,7 @@ func (c *VaultCommand) initVaultAppRole(ctx context.Context, exec *framework.Exe
 	}
 	exec.PrintSuccess(fmt.Sprintf("Policy %q configured", vaultPolicyName))
 
-	if err = client.CreateAppRole(ctx, vaultAppRoleName, vaultPolicyName); err != nil {
+	if err = client.CreateAppRole(ctx, NewCloudSecretsAppRoleRequest(vaultAppRoleName, vaultPolicyName)); err != nil {
 		return err
 	}
 	exec.PrintSuccess(fmt.Sprintf("AppRole %q configured", vaultAppRoleName))
@@ -270,6 +270,17 @@ path "%s/data/*" {
   capabilities = ["read"]
 }
 `, mountPath, mountPath, mountPath),
+	}
+}
+
+func NewCloudSecretsAppRoleRequest(name string, policyName string) api.CreateAppRoleRequest {
+	return api.CreateAppRoleRequest{
+		Name:            name,
+		TokenPolicies:   []string{policyName},
+		TokenTTL:        "1h",
+		TokenMaxTTL:     "4h",
+		SecretIDTTL:     "0",
+		SecretIDNumUses: 0,
 	}
 }
 
