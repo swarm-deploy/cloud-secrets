@@ -5,10 +5,17 @@
 Как ключи Vault преобразуются в Docker Swarm secrets:
 - Каждый ключ внутри одного Vault secret (`data`) синхронизируется как отдельный Docker Swarm secret.
 - Это правило применяется всегда, даже если в Vault secret только один ключ.
-- Формат внешнего пути: `<vault-path>/<key>`.
-- Пример: если `secret/cloud-secrets/users-db` содержит `username` и `password`, в Swarm будут созданы secrets:
-  - `cloud-secrets-users-db-username`
-  - `cloud-secrets-users-db-password`
+- Указанный `VAULT_MOUNT_PATH` не включается в имя Docker Swarm secret.
+- Формат внешнего пути: `<path-inside-mount>/<key>`.
+- Пример: если один Vault secret создан по пути `prod/orders`:
+
+```sh
+vault kv put prod/orders username="orders_user" password="orders_password"
+```
+
+Тогда `prod` - это KV mount, `orders` - путь внутри mount, а `cloud-secrets` создает два Docker Swarm secrets:
+  - `orders-username`
+  - `orders-password`
 
 ## Настройка с Vault Token
 

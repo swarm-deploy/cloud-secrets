@@ -5,10 +5,17 @@
 How Vault Keys Map to Swarm Secrets:
 - Each key inside one Vault secret (`data`) is synchronized as a separate Docker Swarm secret.
 - This rule always applies, even when a Vault secret has only one key.
-- External path format: `<vault-path>/<key>`.
-- Example: if `secret/cloud-secrets/users-db` contains `username` and `password`, Swarm secrets will be:
-  - `cloud-secrets-users-db-username`
-  - `cloud-secrets-users-db-password`
+- The configured `VAULT_MOUNT_PATH` is not included in the Docker Swarm secret name.
+- External path format: `<path-inside-mount>/<key>`.
+- Example: if one Vault secret is created at `prod/orders`:
+
+```sh
+vault kv put prod/orders username="orders_user" password="orders_password"
+```
+
+Then `prod` is the KV mount, `orders` is the path inside the mount, and `cloud-secrets` creates two Docker Swarm secrets:
+  - `orders-username`
+  - `orders-password`
 
 ## Setup with Vault Token
 
