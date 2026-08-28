@@ -75,7 +75,7 @@ func NewHttpClient(
 
 	slog.InfoContext(ctx, "[vault] ping")
 
-	if _, err = client.ListKeys(ctx, "/"); err != nil {
+	if _, err = client.AppRoleAuthEnabled(ctx); err != nil {
 		return nil, fmt.Errorf("ping vault: %w", err)
 	}
 
