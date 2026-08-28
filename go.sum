@@ -132,6 +132,8 @@ github.com/stretchr/testify v1.11.1 h1:7s2iGBzp5EwR7/aIZr8ao5+dra3wiQyKjjFuvgVKu
 github.com/stretchr/testify v1.11.1/go.mod h1:wZwfW3scLgRK+23gO65QZefKpKQRnfz6sD981Nm4B6U=
 github.com/swarm-deploy/dockertester v0.0.0-20260826201240-c97b5a4abfe7 h1:ZQjNxA2IW1sWJymI0MJsd1lhccMjHDBfPig43lnV2tg=
 github.com/swarm-deploy/dockertester v0.0.0-20260826201240-c97b5a4abfe7/go.mod h1:+1umO3yRQbkfF2mYQgYE+uRBCCsEtAefI5Iu0o3WCL4=
+github.com/swarm-deploy/dockertester v0.1.0 h1:t8xZR5cVrhRdDoMiRB7Wjy0NNpkSaegnQcvgii8lNKE=
+github.com/swarm-deploy/dockertester v0.1.0/go.mod h1:+1umO3yRQbkfF2mYQgYE+uRBCCsEtAefI5Iu0o3WCL4=
 github.com/yuin/goldmark v1.3.5/go.mod h1:mwnBkeHKe2W/ZEtQ+71ViKU8L12m81fl3OWwC1Zlc8k=
 go.opentelemetry.io/auto/sdk v1.2.1 h1:jXsnJ4Lmnqd11kwkBV2LgLoFMZKizbCi5fNZ/ipaZ64=
 go.opentelemetry.io/auto/sdk v1.2.1/go.mod h1:KRTj+aOaElaLi+wW1kO/DZRXwkF4C5xPbEe3ZiIhN7Y=
