@@ -18,13 +18,22 @@ import (
 )
 
 type Application struct {
-	docker engine.Client
+	buildInfo BuildInfo
+
+	docker *engine.DockerClient
 
 	commands []framework.Command
 }
 
-func NewApplication() (*Application, error) {
-	app := &Application{}
+type BuildInfo struct {
+	Date string
+	Version string
+}
+
+func NewApplication(buildInfo BuildInfo) (*Application, error) {
+	app := &Application{
+		buildInfo: buildInfo,
+	}
 
 	dockerClient, err := dock.New(dock.FromEnv, dock.WithAPIVersionFromEnv())
 	if err != nil {
@@ -47,7 +56,8 @@ func (app *Application) Run(ctx context.Context) {
 		Scripts:     app.createScripts(ctx, out),
 		BuildInfo: &go_console.BuildInfo{
 			Name:    "cloud-secrets",
-			Version: "0.3.1",
+			Version: app.buildInfo.Version,
+			BuildFlag: app.buildInfo.Date,
 		},
 	}
 
@@ -112,7 +122,7 @@ func (app *Application) createScripts(ctx context.Context, out output.OutputInte
 
 func (app *Application) createCommands() {
 	app.commands = []framework.Command{
-		&SyncCommand{},
+		NewSyncCommand(app.docker),
 		NewListCommand(app.docker),
 		NewInitCommand(app.docker),
 	}

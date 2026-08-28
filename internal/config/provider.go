@@ -18,11 +18,6 @@ const (
 	ProviderNameVault ProviderName = "vault"
 )
 
-var ProviderNames = []string{
-	string(ProviderNameCloudRU),
-	string(ProviderNameVault),
-}
-
 func (t *ProviderName) UnmarshalText(text []byte) error {
 	typ := ProviderName(text)
 	if err := typ.Validate(); err != nil {

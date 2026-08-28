@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -97,6 +98,33 @@ func (c *DockerClient) CreateSecret(ctx context.Context, spec CreatingSecret) er
 			},
 			Data: spec.Value,
 		},
+	})
+	return err
+}
+
+func (c *DockerClient) GetContainerID(ctx context.Context, labelKV string) (string, error) {
+	filter := dock.Filters{}
+
+	filter.Add("label", labelKV)
+
+	containers, err := c.client.ContainerList(ctx, dock.ContainerListOptions{
+		Limit:   1,
+		Filters: filter,
+	})
+	if err != nil {
+		return "", fmt.Errorf("list containers: %w", err)
+	}
+
+	if len(containers.Items) == 0 {
+		return "", errors.New("no containers found")
+	}
+
+	return containers.Items[0].ID, nil
+}
+
+func (c *DockerClient) SighUPContainer(ctx context.Context, id string) error {
+	_, err := c.client.ContainerKill(ctx, id, dock.ContainerKillOptions{
+		Signal: "SIGHUP",
 	})
 	return err
 }

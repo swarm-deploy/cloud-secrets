@@ -15,6 +15,7 @@ RUN go mod download
 COPY . .
 
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w -X 'main.Version=${APP_VERSION}' -X 'main.BuildDate=${BUILD_TIME}'" -o /go/bin/cloud-secrets /go/src/github.com/artarts36/cloud-secrets/cmd/cloud-secrets/main.go
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w -X 'main.Version=${APP_VERSION}' -X 'main.BuildDate=${BUILD_TIME}'" -o /go/bin/cs /go/src/github.com/artarts36/cloud-secrets/cmd/cscli/main.go
 
 ######################################################
 
@@ -22,8 +23,7 @@ FROM scratch
 
 COPY --from=alpine:latest /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-COPY --from=builder /go/bin/cloud-secrets /go/bin/cloud-secrets
-
+COPY --from=builder /go/bin/cloud-secrets /usr/bin/cs
 EXPOSE 8000
 
 LABEL org.opencontainers.image.title="cloud-secrets"
@@ -36,4 +36,6 @@ LABEL org.opencontainers.image.created="$BUILD_TIME"
 LABEL org.opencontainers.image.licenses="Apache 2.0"
 LABEL org.swarm-deploy.service.type="SecretManager"
 
-ENTRYPOINT ["/go/bin/cloud-secrets"]
+ENV CS_LOG_LEVEL=debug
+
+ENTRYPOINT ["/usr/bin/cs"]

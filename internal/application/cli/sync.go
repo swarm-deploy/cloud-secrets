@@ -2,13 +2,11 @@ package cli
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
-	"os/exec"
-	"strings"
 
 	"github.com/swarm-deploy/cloud-secrets/internal/application/cli/framework"
+	"github.com/swarm-deploy/cloud-secrets/internal/engine"
 )
 
 const (
@@ -16,6 +14,7 @@ const (
 )
 
 type SyncCommand struct {
+	docker *engine.DockerClient
 }
 
 func (c *SyncCommand) Definition() framework.Definition {
@@ -25,15 +24,21 @@ func (c *SyncCommand) Definition() framework.Definition {
 	}
 }
 
+func NewSyncCommand(docker *engine.DockerClient) *SyncCommand {
+	return &SyncCommand{
+		docker: docker,
+	}
+}
+
 func (c *SyncCommand) Run(ctx context.Context, _ *framework.Execution) error {
-	containerID, err := c.findContainerID(ctx)
+	containerID, err := c.docker.GetContainerID(ctx, "org.opencontainers.image.title=cloud-secrets")
 	if err != nil {
 		return fmt.Errorf("find container id: %w", err)
 	}
 
-	cmd := exec.CommandContext(ctx, "docker", "kill", "--signal", "HUP", containerID)
-	if output, killErr := cmd.CombinedOutput(); killErr != nil {
-		return fmt.Errorf("send SIGHUP to container %q (%s): %v\n%s", containerName, containerID, killErr, string(output))
+	err = c.docker.SighUPContainer(ctx, containerID)
+	if err != nil {
+		return fmt.Errorf("send SIGHUP to container (%s): %w", containerID, err)
 	}
 
 	slog.Info("sent SIGHUP to container",
@@ -42,22 +47,4 @@ func (c *SyncCommand) Run(ctx context.Context, _ *framework.Execution) error {
 	)
 
 	return nil
-}
-
-func (c *SyncCommand) findContainerID(ctx context.Context) (string, error) {
-	// Use shell as requested to resolve container ID by exact container name.
-	cmd := exec.CommandContext(ctx, "sh", "-c",
-		"docker ps --filter name="+containerName+" --format '{{.ID}}' | head -n1",
-	)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", fmt.Errorf("%w: %s", err, strings.TrimSpace(string(output)))
-	}
-
-	containerID := strings.TrimSpace(string(output))
-	if containerID == "" {
-		return "", errors.New("container not found")
-	}
-
-	return containerID, nil
 }
