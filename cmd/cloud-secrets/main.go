@@ -38,7 +38,7 @@ const metricsReadHeaderTimeout = 10 * time.Second
 func runCLI() {
 	app, err := cli.NewApplication(cli.BuildInfo{
 		Version: Version,
-		Date: 	 BuildDate,
+		Date:    BuildDate,
 	})
 	if err != nil {
 		slog.Error("[main] failed to create application", slog.Any("err", err))
@@ -48,7 +48,7 @@ func runCLI() {
 	app.Run(context.Background())
 }
 
-func runCloudSecrets()  {
+func runCloudSecrets() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	})))

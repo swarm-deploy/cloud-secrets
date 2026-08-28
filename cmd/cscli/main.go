@@ -16,7 +16,7 @@ var (
 func main() {
 	app, err := cli.NewApplication(cli.BuildInfo{
 		Version: Version,
-		Date: 	 BuildDate,
+		Date:    BuildDate,
 	})
 	if err != nil {
 		slog.Error("[main] failed to create application", slog.Any("err", err))

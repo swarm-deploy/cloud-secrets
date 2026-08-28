@@ -32,7 +32,7 @@ func getEndpoints(ctx context.Context, url string) (*EndpointsResponse, error) {
 
 	slog.InfoContext(ctx, "get endpoints from cloud.ru", slog.String("discovery_url", url))
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := http.DefaultClient.Do(req) //nolint:gosec // Destination URL is controlled by configuration.
 	if err != nil {
 		return nil, fmt.Errorf("get cloud.ru endpoints: %w", err)
 	}

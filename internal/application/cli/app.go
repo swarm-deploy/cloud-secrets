@@ -26,7 +26,7 @@ type Application struct {
 }
 
 type BuildInfo struct {
-	Date string
+	Date    string
 	Version string
 }
 
