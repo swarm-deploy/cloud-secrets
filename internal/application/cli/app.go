@@ -91,5 +91,6 @@ func (app *Application) createCommands() {
 	app.commands = []framework.Command{
 		&SyncCommand{},
 		NewListCommand(app.docker),
+		NewInitCommand(app.docker),
 	}
 }
