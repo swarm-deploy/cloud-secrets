@@ -113,6 +113,7 @@ docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false
 **Requirements**
 
 * A running Vault instance reachable from Docker Swarm manager nodes.
+  If `VAULT_ADDR` uses the service name `vault`, run Vault on a Swarm overlay network that is also attached to the `cloud-secrets` stack.
 * An enabled `KV v2` mount (for example, `prod/`).
 * An enabled Vault `AppRole` auth method.
 * A Vault AppRole with a policy that has `list` and `read` permissions for the configured KV mount.
@@ -261,8 +262,11 @@ services:
       - VAULT_MOUNT_PATH=prod
       - VAULT_AUTH_APPROLE_ROLE_ID=/run/secrets/vault-approle-role-id
       - VAULT_AUTH_APPROLE_SECRET_ID=/run/secrets/vault-approle-secret-id
+    networks:
+      - vault
     secrets:
-      - vault-auth-token
+      - vault-approle-role-id
+      - vault-approle-secret-id
     deploy:
       labels:
         - prometheus.port=8000
@@ -270,10 +274,18 @@ services:
         constraints:
           - node.role == manager
 
+networks:
+  vault:
+    external: true
+
 secrets:
-  vault-auth-token:
+  vault-approle-role-id:
+    external: true
+  vault-approle-secret-id:
     external: true
 ```
+
+The external `vault` network must be the same Swarm overlay network where the Vault service is reachable as `vault`.
 </details>
 
 <details>
