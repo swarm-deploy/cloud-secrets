@@ -12,4 +12,6 @@ type Command interface {
 type Definition struct {
 	Name        string
 	Description string
+	Arguments   []Argument
+	Options     []Option
 }

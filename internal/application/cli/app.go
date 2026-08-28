@@ -72,16 +72,33 @@ func (app *Application) createScripts(ctx context.Context, out output.OutputInte
 		}
 	}
 
-	for i, command := range app.commands {
+	for commandIndex, command := range app.commands {
 		definition := command.Definition()
+
+		args := make([]go_console.Argument, len(definition.Arguments))
+		opts := make([]go_console.Option, len(definition.Options))
+
+		for i, argument := range definition.Arguments {
+			args[i] = go_console.Argument{
+				Name: argument.Name,
+			}
+		}
+
+		for i, option := range definition.Options {
+			opts[i] = go_console.Option{
+				Name: option.Name,
+			}
+		}
 
 		script := &go_console.Script{
 			Name:        definition.Name,
 			Description: definition.Description,
 			Runner:      commandRunner(command),
+			Arguments:   args,
+			Options:     opts,
 		}
 
-		scripts[i] = script
+		scripts[commandIndex] = script
 	}
 
 	return scripts
