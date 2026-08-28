@@ -91,8 +91,8 @@ services:
       - CS_REFRESH_INTERVAL=10s
       - CS_LOG_LEVEL=debug
       - VAULT_ADDR=http://vault:8200
-      - vault-auth-token=/var/run/secrets/vault-auth-token
-      - VAULT_MOUNT_PATH=secret
+      - VAULT_AUTH_TOKEN=/var/run/secrets/vault-auth-token
+      - VAULT_MOUNT_PATH=prod
     secrets:
       - vault-auth-token
     deploy:

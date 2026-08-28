@@ -36,6 +36,4 @@ LABEL org.opencontainers.image.created="$BUILD_TIME"
 LABEL org.opencontainers.image.licenses="Apache 2.0"
 LABEL org.swarm-deploy.service.type="SecretManager"
 
-ENV CS_LOG_LEVEL=debug
-
 ENTRYPOINT ["/usr/bin/cs"]

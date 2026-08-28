@@ -55,8 +55,8 @@ func (app *Application) Run(ctx context.Context) {
 		Output:      out,
 		Scripts:     app.createScripts(ctx, out),
 		BuildInfo: &go_console.BuildInfo{
-			Name:    "cloud-secrets",
-			Version: app.buildInfo.Version,
+			Name:      "cloud-secrets",
+			Version:   app.buildInfo.Version,
 			BuildFlag: app.buildInfo.Date,
 		},
 	}
