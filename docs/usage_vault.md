@@ -67,7 +67,7 @@ docker secret create vault-auth-token --label cloud-secrets.secret.managed=true 
 </details>
 
 <details>
-  <summary>5. Copy docker-compose.yaml for cloud-secrets Stack </summary>
+  <summary>5. Copy docker-compose.yaml for cloud-secrets Stack</summary>
 
 ```yaml
 version: '3.8'
@@ -97,6 +97,7 @@ secrets:
   vault-auth-token:
     external: true
 ```
+
 </details>
 
 <details>
@@ -244,6 +245,35 @@ The secrets will be mounted into the `cloud-secrets` container at:
 <details>
   <summary>7. Copy docker-compose.yaml for cloud-secrets Stack </summary>
 
+```yaml
+version: '3.8'
+
+services:
+  cloud-secrets:
+    image: swarmdeployorg/cloud-secrets:v0.4.0
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    environment:
+      - CS_PROVIDER=vault
+      - CS_REFRESH_INTERVAL=10s
+      - CS_LOG_LEVEL=debug
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_MOUNT_PATH=prod
+      - VAULT_AUTH_APPROLE_ROLE_ID=/run/secrets/vault-approle-role-id
+      - VAULT_AUTH_APPROLE_SECRET_ID=/run/secrets/vault-approle-secret-id
+    secrets:
+      - vault-auth-token
+    deploy:
+      labels:
+        - prometheus.port=8000
+      placement:
+        constraints:
+          - node.role == manager
+
+secrets:
+  vault-auth-token:
+    external: true
+```
 </details>
 
 <details>
