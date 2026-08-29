@@ -76,7 +76,7 @@ secret_id_ttl=0
 - cloud-secrets-vault-approle-secret-id
 </details>
 
-**Шаги**
+#### Шаги
 
 <details>
   <summary>1. Создайте новый KV secrets engine в Vault</summary>
@@ -163,7 +163,7 @@ docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false
 
 ### Ручная настройка
 
-**Шаги**
+#### Шаги
 
 <details>
   <summary>1. Создайте новый KV secrets engine в Vault</summary>
@@ -335,14 +335,14 @@ docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false
 ```
 </details>
 
-## Настройка с Vault Token
+## Использование cloud-secrets с Vault Token
 
 **Пререквизиты**
 
 * Запущенный Vault, доступный с manager-нод Docker Swarm.
 * В этом примерае мы будем исходить из того, что Vault развернут в сети `vault` и доступен по адресу `vault:8200`
 
-**Шаги**
+### Шаги
 
 <details>
   <summary>1. Создайте новый KV secrets engine в Vault</summary>
