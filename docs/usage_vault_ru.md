@@ -11,7 +11,7 @@
 > [!TIP]
 > Пример: если один Vault secret создан по пути `prod/orders` и имеет ключи `db-user` и `db-password`
 > 
-> Тогда `prod` - это KV mount, `orders` - путь внутри mount, а `cloud-secrets` создает два секрета в Docker Swarm:
+> Тогда `prod` - это mount path KV v2, `orders` - путь внутри mount, а `cloud-secrets` создает два секрета в Docker Swarm:
 > * `orders-db-user`
 > * `orders-db-password`
 
@@ -161,7 +161,7 @@ secrets:
 </details>
 
 <details>
-  <summary>4. Задеплоить cloud-secrets stack</summary>
+  <summary>4. Разверните cloud-secrets stack</summary>
 
 ```sh
 docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false
