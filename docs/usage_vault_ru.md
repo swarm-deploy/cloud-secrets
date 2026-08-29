@@ -103,10 +103,10 @@ secret_id_num_uses=0
 <details>
   <summary>2. Запустите cloud-secrets CLI</summary>
 
-Запустите следующий скрипт
+Запустите следующую команду:
 
 ```shell
-docker run --rm --network=vault -v /var/run/docker.sock:/var/run/docker.sock:ro swarmdeployorg/cloud-secrets:v0.4.0 vault approle vault:8200 prod
+docker run --rm --network=vault -it -v /var/run/docker.sock:/var/run/docker.sock:ro swarmdeployorg/cloud-secrets:v0.4.0 vault approle vault:8200 prod
 ```
 
 Где:
@@ -382,6 +382,7 @@ path "prod/metadata/*" {
 
 path "prod/data/*" {
   capabilities = ["read"]
+}
 ```
 
 3. Нажмите кнопку `Create policy`.
@@ -403,8 +404,9 @@ vault token create -policy=cloud-secrets
   <summary>4. Создайте Docker Swarm Secret для Vault Token</summary>
 
 ```sh
-printf %s "root-token" > vault-auth-token
-docker secret create cloud-secrets-vault-auth-token ./vault-auth-token
+printf %s "root-token" | \
+  docker secret create \
+    cloud-secrets-vault-auth-token -
 ```
 </details>
 
