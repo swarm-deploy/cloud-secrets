@@ -404,7 +404,7 @@ vault token create -policy=cloud-secrets
   <summary>4. Создайте Docker Swarm Secret для Vault Token</summary>
 
 ```sh
-printf %s "root-token" | \
+printf %s "<VAULT-TOKEN>" | \
   docker secret create \
     cloud-secrets-vault-auth-token -
 ```
