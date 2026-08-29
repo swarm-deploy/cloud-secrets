@@ -7,15 +7,13 @@
 - Это правило применяется всегда, даже если в Vault secret только один ключ.
 - Указанный `VAULT_MOUNT_PATH` не включается в имя Docker Swarm secret.
 - Формат внешнего пути: `<path-inside-mount>/<key>`.
-- Пример: если один Vault secret создан по пути `prod/orders`:
 
-```sh
-vault kv put prod/orders username="orders_user" password="orders_password"
-```
-
-Тогда `prod` - это KV mount, `orders` - путь внутри mount, а `cloud-secrets` создает два Docker Swarm secrets:
-  - `orders-username`
-  - `orders-password`
+> [!TIP]
+> Пример: если один Vault secret создан по пути `prod/orders` и имеет ключи `db-user` и `db-password`
+> 
+> Тогда `prod` - это KV mount, `orders` - путь внутри mount, а `cloud-secrets` создает два секрета в Docker Swarm:
+> * `orders-db-user`
+> * `orders-db-password`
 
 ## Использование cloud-secrets с Vault AppRole
 
@@ -25,7 +23,7 @@ vault kv put prod/orders username="orders_user" password="orders_password"
 
 В инструкциях ниже мы создадим KV Engine, AppRole и секреты для работы **cloud-secrets** с Vault.
 
-> [!NOTE]
+> [!IMPORTANT]
 > cloud-secrets использует RoleID и SecretID только для аутентификации в Vault. 
 > 
 > Vault runtime token, который возвращается через AppRole, хранится в памяти и автоматически запрашивается заново при необходимости.
