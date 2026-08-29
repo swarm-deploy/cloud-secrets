@@ -12,8 +12,8 @@ import (
 	gopipeprom "github.com/artarts36/gopipe/pkg/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/swarm-deploy/cloud-secrets/internal/application/cli"
 	"github.com/swarm-deploy/cloud-secrets/internal/application/cs"
-
 	"github.com/swarm-deploy/cloud-secrets/internal/config"
 	"github.com/swarm-deploy/cloud-secrets/internal/grpcx"
 	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
@@ -25,6 +25,30 @@ var (
 )
 
 func main() {
+	run := runCloudSecrets
+	if len(os.Args) > 1 {
+		run = runCLI
+	}
+
+	run()
+}
+
+const metricsReadHeaderTimeout = 10 * time.Second
+
+func runCLI() {
+	app, err := cli.NewApplication(cli.BuildInfo{
+		Version: Version,
+		Date:    BuildDate,
+	})
+	if err != nil {
+		slog.Error("[main] failed to create application", slog.Any("err", err))
+		os.Exit(1)
+	}
+
+	app.Run(context.Background())
+}
+
+func runCloudSecrets() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	})))
@@ -88,8 +112,6 @@ func main() {
 		os.Exit(1)
 	}
 }
-
-const metricsReadHeaderTimeout = 10 * time.Second
 
 func createHealthServer() *http.Server {
 	mux := http.NewServeMux()

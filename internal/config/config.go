@@ -7,13 +7,16 @@ import (
 
 	"github.com/caarlos0/env/v11"
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/cloudru"
+	"github.com/swarm-deploy/cloud-secrets/internal/providers/vault"
 	"github.com/swarm-deploy/cloud-secrets/internal/secretname"
 )
 
 type Config struct {
-	CloudRu cloudru.Config `envPrefix:"CLOUDRU_"`
+	CloudRu *cloudru.Config `envPrefix:"CLOUDRU_"`
+	Vault   *vault.Config   `envPrefix:"VAULT_"`
 
 	CloudSecrets struct {
+		Provider        ProviderName  `env:"PROVIDER" envDefault:"cloudru"`
 		RefreshInterval time.Duration `env:"REFRESH_INTERVAL" envDefault:"5m"`
 
 		CleanupOrphanedSecrets bool `env:"CLEANUP_ORPHANED"`
@@ -36,8 +39,8 @@ func Load() (*Config, error) {
 		return nil, fmt.Errorf("validate CS_SECRET_NAME_FOLDER_DELIMITER: %w", err)
 	}
 
-	if err = cfg.CloudRu.Validate(); err != nil {
-		return nil, fmt.Errorf("validate cloudru config: %w", err)
+	if err = loadProviderConfig(&cfg); err != nil {
+		return nil, fmt.Errorf("load provider config: %w", err)
 	}
 
 	return &cfg, nil

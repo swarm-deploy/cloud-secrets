@@ -1,0 +1,35 @@
+name: e2e tests
+
+on:
+  push:
+    branches: ['master']
+  pull_request:
+
+jobs:
+  swarm-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Initialize Swarm
+        run: |
+          docker swarm init --advertise-addr 127.0.0.1
+          echo "Swarm mode is ready"
+
+      - name: Install Go dependencies
+        run: go mod download
+
+      - name: Build Docker Images
+        run: docker build . -t swarmdeployorg/cloud-secrets:local
+
+      - name: Run Tests
+        env:
+          CS_E2E: 1
+        run: go test ./e2e/...
+
+      - name: Clean up Swarm
+        if: always()
+        run: |
+          docker swarm leave --force
