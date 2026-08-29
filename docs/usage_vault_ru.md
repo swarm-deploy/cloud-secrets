@@ -17,116 +17,14 @@ vault kv put prod/orders username="orders_user" password="orders_password"
   - `orders-username`
   - `orders-password`
 
-## Настройка с Vault Token
-
-**Требования**
-- Запущенный Vault, доступный с manager-нод Docker Swarm.
-- Включенный mount `KV v2`, например `secret/`.
-- Vault runtime token, смонтированный из файла и имеющий права `list` и `read`.
-
-**Шаги**
-
-<details>
-  <summary>1. Создайте новый KV secrets engine в Vault</summary>
-
-1. На странице создания Secret Engine выберите KV.
-
-![](./screenshots/vault_1_1_se_kv.png)
-
-2. Укажите path `prod`.
-
-![](./screenshots/vault_1_1_se_kv.png)
-
-3. Нажмите кнопку `Enable engine`.
-</details>
-
-<details>
-  <summary>2. Создайте ACL Policy</summary>
-
-1. Укажите Name `cloud-secrets`.
-2. Укажите Policy со следующим содержимым:
-
-```hcl
-path "prod/*" {
-  capabilities = ["read", "list"]
-}
-```
-
-3. Нажмите кнопку `Create policy`.
-
-![](./screenshots/vault_1_1_se_kv.png)
-</details>
-
-<details>
-  <summary>3. Создайте новый token для cloud-secrets</summary>
-
-Внутри контейнера Vault создайте token следующей командой:
-
-```sh
-vault token create -policy=cloud-secrets
-```
-</details>
-
-<details>
-  <summary>4. Создайте Docker Swarm Secret для Vault Token</summary>
-
-```sh
-printf %s "root-token" > vault-auth-token
-docker secret create vault-auth-token --label cloud-secrets.secret.managed=true ./vault-auth-token
-```
-</details>
-
-<details>
-  <summary>5. Скопируйте docker-compose.yaml для cloud-secrets Stack</summary>
-
-```yaml
-version: '3.8'
-
-services:
-  cloud-secrets:
-    image: swarmdeployorg/cloud-secrets:v0.4.0
-    volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock:ro"
-    environment:
-      - CS_PROVIDER=vault
-      - CS_REFRESH_INTERVAL=10s
-      - CS_LOG_LEVEL=debug
-      - VAULT_ADDR=http://vault:8200
-      - VAULT_AUTH_TOKEN=/var/run/secrets/vault-auth-token
-      - VAULT_MOUNT_PATH=prod
-    secrets:
-      - vault-auth-token
-    deploy:
-      labels:
-        - prometheus.port=8000
-      placement:
-        constraints:
-          - node.role == manager
-
-secrets:
-  vault-auth-token:
-    external: true
-```
-
-</details>
-
-<details>
-  <summary>6. Разверните Stack</summary>
-
-```sh
-docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false
-```
-</details>
-
 ## Настройка с Vault AppRole
 
 **Требования**
 
 * Запущенный Vault, доступный с manager-нод Docker Swarm.
   Если `VAULT_ADDR` использует имя service `vault`, запустите Vault в Swarm overlay-сети, которая также подключена к stack `cloud-secrets`.
-* Включенный mount `KV v2`, например `prod/`.
-* Включенный метод аутентификации Vault `AppRole`.
-* Vault AppRole с policy, у которой есть права `list` и `read` для настроенного KV mount.
+
+### Ручная настройка
 
 **Шаги**
 
@@ -300,6 +198,107 @@ secrets:
 
 <details>
   <summary>8. Разверните Stack</summary>
+
+```sh
+docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false
+```
+</details>
+
+## Настройка с Vault Token
+
+**Требования**
+- Запущенный Vault, доступный с manager-нод Docker Swarm.
+- Включенный mount `KV v2`, например `secret/`.
+- Vault runtime token, смонтированный из файла и имеющий права `list` и `read`.
+
+**Шаги**
+
+<details>
+  <summary>1. Создайте новый KV secrets engine в Vault</summary>
+
+1. На странице создания Secret Engine выберите KV.
+
+![](./screenshots/vault_1_1_se_kv.png)
+
+2. Укажите path `prod`.
+
+![](./screenshots/vault_1_1_se_kv.png)
+
+3. Нажмите кнопку `Enable engine`.
+</details>
+
+<details>
+  <summary>2. Создайте ACL Policy</summary>
+
+1. Укажите Name `cloud-secrets`.
+2. Укажите Policy со следующим содержимым:
+
+```hcl
+path "prod/*" {
+  capabilities = ["read", "list"]
+}
+```
+
+3. Нажмите кнопку `Create policy`.
+
+![](./screenshots/vault_1_1_se_kv.png)
+</details>
+
+<details>
+  <summary>3. Создайте новый token для cloud-secrets</summary>
+
+Внутри контейнера Vault создайте token следующей командой:
+
+```sh
+vault token create -policy=cloud-secrets
+```
+</details>
+
+<details>
+  <summary>4. Создайте Docker Swarm Secret для Vault Token</summary>
+
+```sh
+printf %s "root-token" > vault-auth-token
+docker secret create vault-auth-token --label cloud-secrets.secret.managed=true ./vault-auth-token
+```
+</details>
+
+<details>
+  <summary>5. Скопируйте docker-compose.yaml для cloud-secrets Stack</summary>
+
+```yaml
+version: '3.8'
+
+services:
+  cloud-secrets:
+    image: swarmdeployorg/cloud-secrets:v0.4.0
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    environment:
+      - CS_PROVIDER=vault
+      - CS_REFRESH_INTERVAL=10s
+      - CS_LOG_LEVEL=debug
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_AUTH_TOKEN=/var/run/secrets/vault-auth-token
+      - VAULT_MOUNT_PATH=prod
+    secrets:
+      - vault-auth-token
+    deploy:
+      labels:
+        - prometheus.port=8000
+      placement:
+        constraints:
+          - node.role == manager
+
+secrets:
+  vault-auth-token:
+    external: true
+```
+
+</details>
+
+<details>
+  <summary>6. Разверните Stack</summary>
 
 ```sh
 docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false
