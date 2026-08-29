@@ -189,7 +189,7 @@ func TestVaultCommandRunAppRoleDockerSecretCreationFailure(t *testing.T) {
 
 	err := cmd.Run(ctx, exec)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), `create Docker Swarm secret "vault-approle-secret-id"`)
+	require.Contains(t, err.Error(), `create Docker Swarm secret "cloud-secrets-vault-approle-secret-id"`)
 	require.Contains(t, err.Error(), "docker unavailable")
 	require.NotContains(t, out.Fetch(), "generated-sensitive-value")
 }

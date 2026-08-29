@@ -32,8 +32,8 @@ const (
 	vaultAppRoleName = "cloud-secrets"
 
 	vaultStaticTokenSecretName     = "cloud-secrets-vault-token"
-	vaultAppRoleRoleIDSecretName   = "cloud-secrets-vault-approle-role-id"   //nolint:lll,gosec // Docker secret name, not a credential.
-	vaultAppRoleSecretIDSecretName = "cloud-secrets-vault-approle-secret-id" //nolint:lll,gosec // Docker secret name, not a credential.
+	vaultAppRoleRoleIDSecretName   = "cloud-secrets-vault-approle-role-id"   //nolint:lll // Docker secret name, not a credential.
+	vaultAppRoleSecretIDSecretName = "cloud-secrets-vault-approle-secret-id" //nolint:lll // Docker secret name, not a credential.
 
 	vaultEnvAddr      = "VAULT_ADDR"
 	vaultEnvMountPath = "VAULT_MOUNT_PATH"

@@ -65,6 +65,7 @@ token_policies=cloud-secrets
 token_ttl=1h
 token_max_ttl=4h
 secret_id_ttl=0
+secret_id_num_uses=0
 ```
 
 </details>
@@ -75,6 +76,12 @@ secret_id_ttl=0
 - cloud-secrets-vault-approle-role-id
 - cloud-secrets-vault-approle-secret-id
 </details>
+
+> [!IMPORTANT]
+> Для настройки AppRole CLI запросит Vault token с правами на управление ACL policies и AppRole. 
+> 
+> Token используется только во время настройки и не сохраняется в Docker Swarm.
+
 
 #### Шаги
 
@@ -99,12 +106,12 @@ secret_id_ttl=0
 Запустите следующий скрипт
 
 ```shell
-docker run --rm --network=vault swarmdeployorg/cloud-secrets vault approle vault:8200 prod
+docker run --rm --network=vault -v /var/run/docker.sock:/var/run/docker.sock:ro swarmdeployorg/cloud-secrets:v0.4.0 vault approle vault:8200 prod
 ```
 
 Где:
-- `vault:8200` - адрес к инстансу Vault
-- `prod` - имя KV Engine
+- `vault:8200` - адрес Vault
+- `prod` - mount path KV v2
 
 </details>
 
@@ -318,9 +325,9 @@ networks:
     external: true
 
 secrets:
-  vault-approle-role-id:
+  cloud-secrets-vault-approle-role-id:
     external: true
-  vault-approle-secret-id:
+  cloud-secrets-vault-approle-secret-id:
     external: true
 ```
 
@@ -340,7 +347,7 @@ docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false
 **Пререквизиты**
 
 * Запущенный Vault, доступный с manager-нод Docker Swarm.
-* В этом примерае мы будем исходить из того, что Vault развернут в сети `vault` и доступен по адресу `vault:8200`
+* В этом примере мы будем исходить из того, что Vault развернут в сети `vault` и доступен по адресу `vault:8200`
 
 ### Шаги
 
@@ -365,9 +372,16 @@ docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false
 2. Укажите Policy со следующим содержимым:
 
 ```hcl
-path "prod/*" {
+path "prod/metadata" {
+  capabilities = ["list"]
+}
+
+path "prod/metadata/*" {
   capabilities = ["read", "list"]
 }
+
+path "prod/data/*" {
+  capabilities = ["read"]
 ```
 
 3. Нажмите кнопку `Create policy`.
