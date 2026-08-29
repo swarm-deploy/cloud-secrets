@@ -1,4 +1,4 @@
-# Использование HashiCorp Vault (KV v2)
+# Использование cloud-secrets с HashiCorp Vault (KV v2)
 
 [In English](./usage_vault.md)
 
@@ -21,8 +21,7 @@ vault kv put prod/orders username="orders_user" password="orders_password"
 
 **Пререквизиты**
 
-* Запущенный Vault, доступный с manager-нод Docker Swarm.
-  Если `VAULT_ADDR` использует имя service `vault`, запустите Vault в Swarm overlay-сети, которая также подключена к stack `cloud-secrets`.
+* Запущенный Vault, доступный с manager-нод Docker Swarm. В примерах ниже мы будем исходить из того, что Vault развернут в сети `vault` и доступен по адресу `vault:8200`
 
 В инструкциях ниже мы создадим KV Engine, AppRole и секреты для работы **cloud-secrets** с Vault.
 
@@ -101,8 +100,12 @@ secret_id_ttl=0
 Запустите следующий скрипт
 
 ```shell
-docker run --rm --network=rm swarmdeployorg/cloud-secrets vault approle vault:8200 prod
+docker run --rm --network=vault swarmdeployorg/cloud-secrets vault approle vault:8200 prod
 ```
+
+Где:
+- `vault:8200` - адрес к инстансу Vault
+- `prod` - имя KV Engine
 
 </details>
 
@@ -335,10 +338,9 @@ docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false
 
 ## Настройка с Vault Token
 
-**Требования**
-- Запущенный Vault, доступный с manager-нод Docker Swarm.
-- Включенный mount `KV v2`, например `secret/`.
-- Vault runtime token, смонтированный из файла и имеющий права `list` и `read`.
+**Пререквизиты**
+
+* Запущенный Vault, доступный с manager-нод Docker Swarm. В примерах ниже мы будем исходить из того, что Vault развернут в сети `vault` и доступен по адресу `vault:8200`
 
 **Шаги**
 
