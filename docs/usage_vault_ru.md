@@ -17,12 +17,147 @@ vault kv put prod/orders username="orders_user" password="orders_password"
   - `orders-username`
   - `orders-password`
 
-## Настройка с Vault AppRole
+## Использование cloud-secrets с Vault AppRole
 
-**Требования**
+**Пререквизиты**
 
 * Запущенный Vault, доступный с manager-нод Docker Swarm.
   Если `VAULT_ADDR` использует имя service `vault`, запустите Vault в Swarm overlay-сети, которая также подключена к stack `cloud-secrets`.
+
+В инструкциях ниже мы создадим KV Engine, AppRole и секреты для работы **cloud-secrets** с Vault.
+
+> [!NOTE]
+> cloud-secrets использует RoleID и SecretID только для аутентификации в Vault. 
+> 
+> Vault runtime token, который возвращается через AppRole, хранится в памяти и автоматически запрашивается заново при необходимости.
+> 
+> В примерах ниже SecretID не истекает и не имеет ограничения по числу использований. При необходимости ротируйте SecretID отдельно в соответствии с вашей security policy.
+
+
+### Настройка Vault с cloud-secrets CLI
+
+CLI выполнит следующие действия:
+
+&raquo; Включит аутентификацию через AppRole
+
+<details>
+  <summary>Создаст ACL Policy с названием cloud-secrets</summary>
+
+```hcl
+path "mountPath/metadata" {
+  capabilities = ["list"]
+}
+
+path "mountPath/metadata/*" {
+  capabilities = ["read", "list"]
+}
+
+path "mountPath/data/*" {
+  capabilities = ["read"]
+}
+```
+</details>
+
+<details>
+  <summary>Создаст AppRole с названием cloud-secrets</summary>
+
+```
+name=cloud-secrets
+token_policies=cloud-secrets
+token_ttl=1h
+token_max_ttl=4h
+secret_id_ttl=0
+```
+
+</details>
+
+<details>
+  <summary>Создаст секреты в Swarm для аутентификации запросов cloud-secrets с Vault</summary>
+
+- cloud-secrets-vault-approle-role-id
+- cloud-secrets-vault-approle-secret-id
+</details>
+
+**Шаги**
+
+<details>
+  <summary>1. Создайте новый KV secrets engine в Vault</summary>
+
+1. На странице создания Secret Engine выберите KV.
+
+![](./screenshots/vault_1_1_se_kv.png)
+
+2. Укажите path `prod`.
+
+![](./screenshots/vault_1_2_se_name.png)
+
+3. Нажмите кнопку `Enable engine`.
+
+</details>
+
+<details>
+  <summary>1. Запустите cloud-secrets CLI</summary>
+
+Запустите следующий скрипт
+
+```shell
+docker run --rm --network=rm swarmdeployorg/cloud-secrets vault approle vault:8200 prod
+```
+
+</details>
+
+<details>
+  <summary>2. Скопируйте docker-compose.yaml для cloud-secrets Stack</summary>
+
+```yaml
+version: '3.8'
+
+services:
+  cloud-secrets:
+    image: swarmdeployorg/cloud-secrets:v0.4.0
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    environment:
+      - CS_PROVIDER=vault
+      - CS_REFRESH_INTERVAL=10s
+      - CS_LOG_LEVEL=debug
+      - VAULT_ADDR=http://vault:8200
+      - VAULT_MOUNT_PATH=prod
+      - VAULT_AUTH_APPROLE_ROLE_ID=/run/secrets/cloud-secrets-vault-approle-role-id
+      - VAULT_AUTH_APPROLE_SECRET_ID=/run/secrets/cloud-secrets-vault-approle-secret-id
+    networks:
+      - vault
+    secrets:
+      - cloud-secrets-vault-approle-role-id
+      - cloud-secrets-vault-approle-secret-id
+    deploy:
+      labels:
+        - prometheus.port=8000
+      placement:
+        constraints:
+          - node.role == manager
+
+networks:
+  vault:
+    external: true
+
+secrets:
+  cloud-secrets-vault-approle-role-id:
+    external: true
+  cloud-secrets-vault-approle-secret-id:
+    external: true
+```
+
+Внешняя сеть `vault` должна быть той же Swarm overlay-сетью, в которой Vault service доступен под именем `vault`.
+</details>
+
+<details>
+  <summary>8. Разверните Stack</summary>
+
+```sh
+docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false
+```
+</details>
 
 ### Ручная настройка
 
@@ -96,10 +231,6 @@ vault write auth/approle/role/cloud-secrets \
   secret_id_num_uses="0"
 ```
 
-`cloud-secrets` использует RoleID и SecretID только для аутентификации в Vault. Vault runtime token, который возвращается через AppRole, хранится в памяти и автоматически запрашивается заново при необходимости.
-
-В этом примере SecretID не истекает и не имеет ограничения по числу использований. При необходимости ротируйте SecretID отдельно в соответствии с вашей security policy.
-
 </details>
 
 <details>
@@ -129,8 +260,7 @@ vault write -field=secret_id -f auth/approle/role/cloud-secrets/secret-id
 ```sh
 printf %s "<ROLE_ID>" | \
   docker secret create \
-    --label cloud-secrets.secret.managed=true \
-    vault-approle-role-id -
+    cloud-secrets-vault-approle-role-id -
 ```
 
 Создайте Swarm secret с SecretID:
@@ -138,15 +268,14 @@ printf %s "<ROLE_ID>" | \
 ```sh
 printf %s "<SECRET_ID>" | \
   docker secret create \
-    --label cloud-secrets.secret.managed=true \
-    vault-approle-secret-id -
+    cloud-secrets-vault-approle-secret-id -
 ```
 
 Secrets будут смонтированы в контейнер `cloud-secrets` по путям:
 
 ```text
-/run/secrets/vault-approle-role-id
-/run/secrets/vault-approle-secret-id
+/run/secrets/cloud-secrets-vault-approle-role-id
+/run/secrets/cloud-secrets-vault-approle-secret-id
 ```
 
 </details>
@@ -168,13 +297,13 @@ services:
       - CS_LOG_LEVEL=debug
       - VAULT_ADDR=http://vault:8200
       - VAULT_MOUNT_PATH=prod
-      - VAULT_AUTH_APPROLE_ROLE_ID=/run/secrets/vault-approle-role-id
-      - VAULT_AUTH_APPROLE_SECRET_ID=/run/secrets/vault-approle-secret-id
+      - VAULT_AUTH_APPROLE_ROLE_ID=/run/secrets/cloud-secrets-vault-approle-role-id
+      - VAULT_AUTH_APPROLE_SECRET_ID=/run/secrets/cloud-secrets-vault-approle-secret-id
     networks:
       - vault
     secrets:
-      - vault-approle-role-id
-      - vault-approle-secret-id
+      - cloud-secrets-vault-approle-role-id
+      - cloud-secrets-vault-approle-secret-id
     deploy:
       labels:
         - prometheus.port=8000
@@ -259,7 +388,7 @@ vault token create -policy=cloud-secrets
 
 ```sh
 printf %s "root-token" > vault-auth-token
-docker secret create vault-auth-token --label cloud-secrets.secret.managed=true ./vault-auth-token
+docker secret create cloud-secrets-vault-auth-token ./vault-auth-token
 ```
 </details>
 
@@ -279,10 +408,10 @@ services:
       - CS_REFRESH_INTERVAL=10s
       - CS_LOG_LEVEL=debug
       - VAULT_ADDR=http://vault:8200
-      - VAULT_AUTH_TOKEN=/var/run/secrets/vault-auth-token
+      - VAULT_AUTH_TOKEN=/var/run/secrets/cloud-secrets-vault-auth-token
       - VAULT_MOUNT_PATH=prod
     secrets:
-      - vault-auth-token
+      - cloud-secrets-vault-auth-token
     deploy:
       labels:
         - prometheus.port=8000
@@ -291,7 +420,7 @@ services:
           - node.role == manager
 
 secrets:
-  vault-auth-token:
+  cloud-secrets-vault-auth-token:
     external: true
 ```
 
