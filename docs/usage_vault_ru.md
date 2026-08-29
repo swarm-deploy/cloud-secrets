@@ -19,7 +19,8 @@
 
 **Пререквизиты**
 
-* Запущенный Vault, доступный с manager-нод Docker Swarm. В примерах ниже мы будем исходить из того, что Vault развернут в сети `vault` и доступен по адресу `vault:8200`
+* Запущенный Vault, доступный с manager-нод Docker Swarm.
+* В примерах ниже мы будем исходить из того, что Vault развернут в сети `vault` и доступен по адресу `vault:8200`
 
 В инструкциях ниже мы создадим KV Engine, AppRole и секреты для работы **cloud-secrets** с Vault.
 
@@ -120,8 +121,8 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     environment:
       - CS_PROVIDER=vault
-      - CS_REFRESH_INTERVAL=10s
-      - CS_LOG_LEVEL=debug
+      - CS_REFRESH_INTERVAL=1m
+      - CS_LOG_LEVEL=info
       - VAULT_ADDR=http://vault:8200
       - VAULT_MOUNT_PATH=prod
       - VAULT_AUTH_APPROLE_ROLE_ID=/run/secrets/cloud-secrets-vault-approle-role-id
@@ -294,8 +295,8 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     environment:
       - CS_PROVIDER=vault
-      - CS_REFRESH_INTERVAL=10s
-      - CS_LOG_LEVEL=debug
+      - CS_REFRESH_INTERVAL=1m
+      - CS_LOG_LEVEL=info
       - VAULT_ADDR=http://vault:8200
       - VAULT_MOUNT_PATH=prod
       - VAULT_AUTH_APPROLE_ROLE_ID=/run/secrets/cloud-secrets-vault-approle-role-id
@@ -338,7 +339,8 @@ docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false
 
 **Пререквизиты**
 
-* Запущенный Vault, доступный с manager-нод Docker Swarm. В примерах ниже мы будем исходить из того, что Vault развернут в сети `vault` и доступен по адресу `vault:8200`
+* Запущенный Vault, доступный с manager-нод Docker Swarm.
+* В этом примерае мы будем исходить из того, что Vault развернут в сети `vault` и доступен по адресу `vault:8200`
 
 **Шаги**
 
@@ -405,8 +407,8 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock:ro"
     environment:
       - CS_PROVIDER=vault
-      - CS_REFRESH_INTERVAL=10s
-      - CS_LOG_LEVEL=debug
+      - CS_REFRESH_INTERVAL=1m
+      - CS_LOG_LEVEL=info
       - VAULT_ADDR=http://vault:8200
       - VAULT_AUTH_TOKEN=/var/run/secrets/cloud-secrets-vault-auth-token
       - VAULT_MOUNT_PATH=prod
