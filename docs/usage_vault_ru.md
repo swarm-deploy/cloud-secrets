@@ -161,7 +161,7 @@ docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false
 ```
 </details>
 
-### Ручная настройка
+### Полностью ручная настройка Vault
 
 #### Шаги
 
