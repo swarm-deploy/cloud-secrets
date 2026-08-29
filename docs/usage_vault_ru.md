@@ -94,7 +94,7 @@ secret_id_ttl=0
 </details>
 
 <details>
-  <summary>1. Запустите cloud-secrets CLI</summary>
+  <summary>2. Запустите cloud-secrets CLI</summary>
 
 Запустите следующий скрипт
 
@@ -109,7 +109,7 @@ docker run --rm --network=vault swarmdeployorg/cloud-secrets vault approle vault
 </details>
 
 <details>
-  <summary>2. Скопируйте docker-compose.yaml для cloud-secrets Stack</summary>
+  <summary>3. Скопируйте docker-compose.yaml для cloud-secrets Stack</summary>
 
 ```yaml
 version: '3.8'
@@ -154,7 +154,7 @@ secrets:
 </details>
 
 <details>
-  <summary>8. Разверните Stack</summary>
+  <summary>4. Задеплоить cloud-secrets stack</summary>
 
 ```sh
 docker stack deploy -c docker-compose.yaml cloud-secrets --detach=false
