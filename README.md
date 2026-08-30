@@ -1,7 +1,5 @@
 # cloud-secrets
 
-[![OpenSSF Scorecard](https://api.scorecard.dev/projects/github.com/swarm-deploy/cloud-secrets/badge)](https://scorecard.dev/viewer/?uri=github.com/swarm-deploy/cloud-secrets)
-
 **cloud-secrets** is a background service that synchronizes secrets from external secret managers with Docker Swarm.
 
 It automatically detects secret changes, updates Docker Swarm secrets, and rolls out the affected services - without requiring changes to stack YAML files.
