@@ -219,7 +219,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -300,6 +300,10 @@
       "pluginVersion": "11.6.0",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
           "editorMode": "code",
           "expr": "sum by (step_name) (\n  rate(gopipe_step_failed_total{\n    pipeline_name=\"sync_secrets\"\n  }[1m])\n)",
           "legendFormat": "__auto",
@@ -313,7 +317,7 @@
     {
       "datasource": {
         "type": "prometheus",
-        "uid": "PBFA97CFB590B2093"
+        "uid": "${datasource}"
       },
       "fieldConfig": {
         "defaults": {
@@ -394,6 +398,10 @@
       "pluginVersion": "11.6.0",
       "targets": [
         {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "${datasource}"
+          },
           "editorMode": "code",
           "expr": "sum by (step_name) (\n  increase(gopipe_step_started_total{\n    pipeline_name=\"sync_secrets\"\n  }[1m])\n)",
           "legendFormat": "__auto",
@@ -969,5 +977,5 @@
   "timezone": "",
   "title": "Cloud Secrets Overview",
   "uid": "cloud-secrets-overview",
-  "version": 5
+  "version": 7
 }
