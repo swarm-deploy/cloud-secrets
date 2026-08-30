@@ -16,10 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3
 
       - name: Set up Go
-        uses: actions/setup-go@v4 # action page: <https://github.com/actions/setup-go>
+        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4; action page: <https://github.com/actions/setup-go>
         with:
           go-version: 1.26.2
 
@@ -27,7 +27,7 @@ jobs:
         run: go mod download
 
       - name: Run linter
-        uses: golangci/golangci-lint-action@v9
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9
         with:
           version: v2.10.1
           only-new-issues: false # show only new issues if it's a pull request
@@ -38,10 +38,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check out code
-        uses: actions/checkout@v3
+        uses: actions/checkout@a37ce9120846195fa4ece8f58b268e6043cb2f26 # v3
 
       - name: Set up Go
-        uses: actions/setup-go@v4 # action page: <https://github.com/actions/setup-go>
+        uses: actions/setup-go@7b8cf10d4e4a01d4992d18a89f4d7dc5a3e6d6f4 # v4; action page: <https://github.com/actions/setup-go>
         with:
           go-version: 1.26.2
 
