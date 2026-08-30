@@ -53,4 +53,5 @@ flowchart TD
 
 ## Monitoring
 
+- [List of Prometheus metrics](./docs/monitoring.md)
 - [Grafana dashboard](grafana-dashboard.json)
