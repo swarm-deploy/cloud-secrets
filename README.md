@@ -1,6 +1,8 @@
 <p align="center">
-  <source media="(prefers-color-scheme: dark)" srcset="./docs/logo-dark.png">
-  <img src="./docs/logo.png" alt="cloud-secrets logo" width="256" />
+  <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="./docs/logo-dark.png">
+      <img src="./docs/logo.png" alt="cloud-secrets logo" width="256" />
+  </picture>
 </p>
 
 # cloud-secrets
