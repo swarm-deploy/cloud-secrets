@@ -1,3 +1,8 @@
+<p align="center">
+  <source media="(prefers-color-scheme: dark)" srcset="./docs/logo-dark.png">
+  <img src="./docs/logo.png" alt="cloud-secrets logo" width="256" />
+</p>
+
 # cloud-secrets
 
 **cloud-secrets** is a background service that synchronizes secrets from external secret managers with Docker Swarm.
