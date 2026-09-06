@@ -10,12 +10,9 @@ Supported cloud providers:
 
 ## How it works
 
-```mermaid
-flowchart LR
-    A[External Secret Manager] --> B[cloud-secrets]
-    B --> C[Docker Secrets]
-    C --> D[Swarm Services]
-```
+<p align="center">
+  <img src="./docs/architecture-overview.svg" alt="External Secret Manager → cloud-secrets → Docker Secrets → Swarm Services" width="760" />
+</p>
 
 See [Architecture](./docs/architecture.md) for the full synchronization lifecycle.
 
