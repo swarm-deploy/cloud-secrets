@@ -17,7 +17,10 @@ import (
 	"github.com/moby/moby/api/types/swarm"
 	"github.com/stretchr/testify/require"
 	vaultclient "github.com/swarm-deploy/cloud-secrets/internal/providers/vault/api"
+	cloudsecretspb "github.com/swarm-deploy/cloud-secrets/pkg/api/cloudsecrets"
 	"github.com/swarm-deploy/dockertester"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func TestVaultWithStaticToken(t *testing.T) {
@@ -71,6 +74,30 @@ func testVault(t *testing.T, setupAuth vaultAuthSetup) {
 		updatedSecret := f.docker.Secret().Wait(f.ctx, t, updatedVersionID, dockerSecretLabelMatcher)
 		f.docker.Secret().AssertSecretValue(ctx, t, updatedSecret, "new-value")
 	})
+
+	t.Run("get integration info after successful sync", func(t *testing.T) {
+		grpcCtx, grpcCancel := context.WithTimeout(f.ctx, 10*time.Second)
+		defer grpcCancel()
+
+		connection, err := grpc.NewClient(
+			fmt.Sprintf("127.0.0.1:%d", f.grpcPort),
+			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		)
+		require.NoError(t, err)
+		defer func() {
+			require.NoError(t, connection.Close())
+		}()
+
+		response, err := cloudsecretspb.NewControllerClient(connection).GetInfo(
+			grpcCtx,
+			&cloudsecretspb.GetInfoRequest{},
+		)
+		require.NoError(t, err)
+		require.Equal(t, "HashiCorp Vault", response.GetProvider().GetName())
+		require.NotNil(t, response.GetLastSyncAt())
+		require.NoError(t, response.GetLastSyncAt().CheckValid())
+		require.False(t, response.GetLastSyncAt().AsTime().IsZero())
+	})
 }
 
 type vaultEnv struct {
@@ -79,6 +106,7 @@ type vaultEnv struct {
 	vault     vaultclient.Client
 	networkID string
 	runID     string
+	grpcPort  uint32
 }
 
 func setupVaultEnv(t *testing.T, ctx context.Context, setupAuth vaultAuthSetup) *vaultEnv {
@@ -133,12 +161,14 @@ path "%s/data/*" {
 	}))
 
 	authConfig := setupAuth(t, ctx, docker, vault, *parsedVaultAddr)
+	grpcPort, err := dockertester.FreeTCPPort()
+	require.NoError(t, err)
 
 	time.Sleep(500 * time.Millisecond)
 
 	cloudSecretsServiceID, err := docker.Service().Deploy(
 		ctx,
-		cloudSecretsServiceSpec(runID+"-cloud-secrets", cloudSecretsImage, networkID, authConfig),
+		cloudSecretsServiceSpec(runID+"-cloud-secrets", cloudSecretsImage, networkID, grpcPort, authConfig),
 	)
 	require.NoError(t, err)
 	t.Cleanup(func() {
@@ -155,6 +185,7 @@ path "%s/data/*" {
 		vault:     vault,
 		networkID: networkID,
 		runID:     runID,
+		grpcPort:  grpcPort,
 	}
 }
 
@@ -495,11 +526,13 @@ func cloudSecretsServiceSpec(
 	name string,
 	image string,
 	networkID string,
+	grpcPort uint32,
 	auth cloudSecretsVaultAuthConfig,
 ) swarm.ServiceSpec {
 	env := []string{
 		"CS_PROVIDER=vault",
 		"CS_REFRESH_INTERVAL=1s",
+		"CS_GRPC_ADDR=:8001",
 		"CS_LOG_LEVEL=debug",
 		"VAULT_ADDR=http://vault:8200",
 		"VAULT_MOUNT_PATH=" + vaultMountPath,
@@ -526,5 +559,10 @@ func cloudSecretsServiceSpec(
 			Networks:  networkAttachment(networkID),
 		},
 		Mode: oneReplica(),
+		EndpointSpec: &swarm.EndpointSpec{
+			Ports: []swarm.PortConfig{
+				tcpPort(8001, grpcPort),
+			},
+		},
 	}
 }
