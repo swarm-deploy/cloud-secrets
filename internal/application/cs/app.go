@@ -2,6 +2,7 @@ package cs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -34,7 +35,11 @@ type Application struct {
 	synchronizer *sync.Synchronizer
 
 	synchronizing atomic.Bool
+	lastSyncAt    atomic.Pointer[time.Time]
 }
+
+// ErrSyncInProgress is returned when another synchronization is already running.
+var ErrSyncInProgress = errors.New("synchronization is already in progress")
 
 func NewApplication(ctx context.Context, cfg config.Config, metricsGroup *metrics.Group) (*Application, error) {
 	app := &Application{
@@ -81,30 +86,10 @@ func (app *Application) Run(ctx context.Context) error {
 	signal.Notify(sighupChannel, syscall.SIGHUP)
 
 	runSync := func(channel string) {
-		if !app.synchronizing.CompareAndSwap(false, true) {
-			slog.InfoContext(ctx, fmt.Sprintf("skip sync by %s", channel))
-			return
+		_, err := app.Sync(ctx, channel)
+		if errors.Is(err, ErrSyncInProgress) {
+			slog.InfoContext(ctx, "skip sync because another synchronization is running", slog.String("trigger", channel))
 		}
-
-		defer app.synchronizing.Swap(false)
-
-		slog.DebugContext(ctx, "run sync")
-
-		app.metrics.Syncs.RecordRun(channel)
-
-		result, err := app.synchronizer.Sync(ctx)
-		app.metrics.Syncs.SetLastSyncAt(time.Now())
-		if err != nil {
-			slog.ErrorContext(ctx, "failed to sync secrets", slog.Any("err", err))
-		}
-
-		slog.Info("sync finished",
-			slog.Int("secrets_created", result.Created),
-			slog.Int("secrets_removed", result.RemovedSecrets),
-			slog.Int("secret_versions_removed", result.RemovedSecretVersions),
-			slog.Int("secrets_updated", result.Updated),
-			slog.Int("secrets_skipped", result.Skipped),
-		)
 	}
 
 	for {
@@ -121,6 +106,53 @@ func (app *Application) Run(ctx context.Context) error {
 			runSync("interval")
 		}
 	}
+}
+
+// Sync runs the normal synchronization flow for the given trigger.
+func (app *Application) Sync(ctx context.Context, trigger string) (sync.Result, error) {
+	if !app.synchronizing.CompareAndSwap(false, true) {
+		return sync.Result{}, ErrSyncInProgress
+	}
+	defer app.synchronizing.Store(false)
+
+	slog.DebugContext(ctx, "run sync", slog.String("trigger", trigger))
+	app.metrics.Syncs.RecordRun(trigger)
+
+	result, err := app.synchronizer.Sync(ctx)
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to sync secrets", slog.String("trigger", trigger), slog.Any("err", err))
+		return result, err
+	}
+
+	now := time.Now()
+	app.lastSyncAt.Store(&now)
+	app.metrics.Syncs.SetLastSyncAt(now)
+
+	slog.InfoContext(ctx, "sync finished",
+		slog.String("trigger", trigger),
+		slog.Int("secrets_created", result.Created),
+		slog.Int("secrets_removed", result.RemovedSecrets),
+		slog.Int("secret_versions_removed", result.RemovedSecretVersions),
+		slog.Int("secrets_updated", result.Updated),
+		slog.Int("secrets_skipped", result.Skipped),
+	)
+
+	return result, nil
+}
+
+// LastSyncAt returns the last successful synchronization time known by this process.
+func (app *Application) LastSyncAt() (time.Time, bool) {
+	lastSyncAt := app.lastSyncAt.Load()
+	if lastSyncAt == nil {
+		return time.Time{}, false
+	}
+
+	return *lastSyncAt, true
+}
+
+// ProviderDefinition returns human-readable metadata for the configured provider.
+func (app *Application) ProviderDefinition() contracts.ProviderDefinition {
+	return app.secretProvider.Definition()
 }
 
 func (app *Application) Close() error {

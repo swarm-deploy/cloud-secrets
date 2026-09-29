@@ -28,3 +28,7 @@ See [Architecture](./docs/architecture.md) for the full synchronization lifecycl
 
 - [List of Prometheus metrics](./docs/monitoring.md)
 - [Grafana dashboard](grafana-dashboard.json)
+
+## Integrations
+
+- [Optional gRPC Controller API](./docs/integrations.md)

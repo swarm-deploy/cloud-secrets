@@ -18,6 +18,7 @@ type Config struct {
 	CloudSecrets struct {
 		Provider        ProviderName  `env:"PROVIDER" envDefault:"cloudru"`
 		RefreshInterval time.Duration `env:"REFRESH_INTERVAL" envDefault:"5m"`
+		GRPCAddr        string        `env:"GRPC_ADDR"`
 
 		CleanupOrphanedSecrets bool `env:"CLEANUP_ORPHANED"`
 

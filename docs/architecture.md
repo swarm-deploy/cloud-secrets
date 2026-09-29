@@ -12,6 +12,7 @@ flowchart TD
 
     F[Trigger by timer] --> E
     Q[Trigger by SIGHUP] --> E
+    W[Trigger by optional gRPC API] --> E
 
     E --> G[Read secrets from Cloud]
     E --> H[Read secrets from Swarm]

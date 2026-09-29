@@ -15,6 +15,8 @@ import (
 	"github.com/swarm-deploy/cloud-secrets/internal/application/cli"
 	"github.com/swarm-deploy/cloud-secrets/internal/application/cs"
 	"github.com/swarm-deploy/cloud-secrets/internal/config"
+	"github.com/swarm-deploy/cloud-secrets/internal/controller"
+	"github.com/swarm-deploy/cloud-secrets/internal/grpcserver"
 	"github.com/swarm-deploy/cloud-secrets/internal/grpcx"
 	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
 )
@@ -97,7 +99,7 @@ func runCloudSecrets() {
 
 	slog.Info("[main] running application")
 
-	err = entrypoint.Run([]entrypoint.Entrypoint{
+	entrypoints := []entrypoint.Entrypoint{
 		{
 			Name: "application",
 			Run:  app.Run,
@@ -106,7 +108,21 @@ func runCloudSecrets() {
 			},
 		},
 		entrypoint.HTTPServer("health-server", createHealthServer()),
-	})
+	}
+
+	if cfg.CloudSecrets.GRPCAddr != "" {
+		grpcServer := grpcserver.New(
+			cfg.CloudSecrets.GRPCAddr,
+			controller.NewService(Version, app.ProviderDefinition(), app),
+		)
+		entrypoints = append(entrypoints, entrypoint.Entrypoint{
+			Name: "grpc-server",
+			Run:  grpcServer.Run,
+			Stop: grpcServer.Stop,
+		})
+	}
+
+	err = entrypoint.Run(entrypoints)
 	if err != nil {
 		slog.Error("[main] failed to run entrypoints", slog.Any("err", err))
 		os.Exit(1)

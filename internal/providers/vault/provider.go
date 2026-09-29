@@ -35,6 +35,7 @@ func NewProvider(ctx context.Context, cfg Config) (*Provider, error) {
 func (p *Provider) Definition() contracts.ProviderDefinition {
 	return contracts.ProviderDefinition{
 		Name: "HashiCorp Vault",
+		URL:  p.cfg.Addr.String(),
 	}
 }
 
