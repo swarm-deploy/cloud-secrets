@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/swarm-deploy/cloud-secrets/internal/controller"
+	"github.com/swarm-deploy/cloud-secrets/internal/api"
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
 	cloudsecretspb "github.com/swarm-deploy/cloud-secrets/pkg/api/cloudsecrets"
 	"google.golang.org/grpc"
@@ -19,7 +19,7 @@ import (
 func TestNew_RegistersServices(t *testing.T) {
 	t.Parallel()
 
-	server := New("127.0.0.1:0", controller.NewService("test", contracts.ProviderDefinition{}, nil))
+	server := New("127.0.0.1:0", api.NewService("test", contracts.ProviderDefinition{}, nil))
 	services := server.grpcServer.GetServiceInfo()
 
 	assert.Contains(t, services, cloudsecretspb.Controller_ServiceDesc.ServiceName)
@@ -35,7 +35,7 @@ func TestServer_Run_ReturnsErrorWhenAddressOccupied(t *testing.T) {
 		require.NoError(t, listener.Close())
 	})
 
-	server := New(listener.Addr().String(), controller.NewService("test", contracts.ProviderDefinition{}, nil))
+	server := New(listener.Addr().String(), api.NewService("test", contracts.ProviderDefinition{}, nil))
 	err = server.Run(context.Background())
 
 	require.Error(t, err)
@@ -48,7 +48,7 @@ func TestServer_Health(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
-	server := New(listener.Addr().String(), controller.NewService("test", contracts.ProviderDefinition{}, nil))
+	server := New(listener.Addr().String(), api.NewService("test", contracts.ProviderDefinition{}, nil))
 	serveErrors := make(chan error, 1)
 	go func() {
 		serveErrors <- server.serve(listener)

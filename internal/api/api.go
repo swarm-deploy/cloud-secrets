@@ -1,5 +1,5 @@
-//go:generate mockgen -source=$GOFILE -destination=mocks_test.go -package=controller
-package controller
+//go:generate mockgen -source=$GOFILE -destination=mocks_test.go -package=api
+package api
 
 import (
 	"context"

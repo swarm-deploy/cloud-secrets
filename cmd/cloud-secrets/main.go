@@ -12,10 +12,10 @@ import (
 	gopipeprom "github.com/artarts36/gopipe/pkg/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/swarm-deploy/cloud-secrets/internal/api"
 	"github.com/swarm-deploy/cloud-secrets/internal/application/cli"
 	"github.com/swarm-deploy/cloud-secrets/internal/application/cs"
 	"github.com/swarm-deploy/cloud-secrets/internal/config"
-	"github.com/swarm-deploy/cloud-secrets/internal/controller"
 	"github.com/swarm-deploy/cloud-secrets/internal/grpcserver"
 	"github.com/swarm-deploy/cloud-secrets/internal/grpcx"
 	"github.com/swarm-deploy/cloud-secrets/internal/metrics"
@@ -113,7 +113,7 @@ func runCloudSecrets() {
 	if cfg.CloudSecrets.GRPCAddr != "" {
 		grpcServer := grpcserver.New(
 			cfg.CloudSecrets.GRPCAddr,
-			controller.NewService(Version, app.ProviderDefinition(), app),
+			api.NewService(Version, app.ProviderDefinition(), app),
 		)
 		entrypoints = append(entrypoints, entrypoint.Entrypoint{
 			Name: "grpc-server",

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/swarm-deploy/cloud-secrets/internal/controller"
+	"github.com/swarm-deploy/cloud-secrets/internal/api"
 	cloudsecretspb "github.com/swarm-deploy/cloud-secrets/pkg/api/cloudsecrets"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
@@ -21,7 +21,7 @@ type Server struct {
 }
 
 // New creates the integration gRPC server.
-func New(address string, controllerService *controller.Service) *Server {
+func New(address string, controllerService *api.Service) *Server {
 	grpcServer := grpc.NewServer()
 	healthServer := health.NewServer()
 
