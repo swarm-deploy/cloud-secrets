@@ -10,6 +10,7 @@ WORKDIR /go/src/github.com/artarts36/cloud-secrets
 RUN apk add git
 
 COPY go.mod go.sum ./
+COPY pkg/grpc-api/go.mod ./pkg/grpc-api/go.mod
 RUN go mod download
 
 COPY . .
