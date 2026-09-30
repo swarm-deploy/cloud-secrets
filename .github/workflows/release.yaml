@@ -8,6 +8,7 @@ on:
 
 jobs:
   docker:
+    if: ${{ !startsWith(github.event.release.tag_name, 'pkg/grpc-api/') }}
     name: Build docker image
     runs-on: ubuntu-latest
     steps:
