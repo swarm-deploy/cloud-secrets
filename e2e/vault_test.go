@@ -17,7 +17,7 @@ import (
 	"github.com/moby/moby/api/types/swarm"
 	"github.com/stretchr/testify/require"
 	vaultclient "github.com/swarm-deploy/cloud-secrets/internal/providers/vault/api"
-	cloudsecretspb "github.com/swarm-deploy/cloud-secrets/pkg/api/cloudsecrets"
+	grpcapi "github.com/swarm-deploy/cloud-secrets/pkg/grpc-api"
 	"github.com/swarm-deploy/dockertester"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -88,9 +88,9 @@ func testVault(t *testing.T, setupAuth vaultAuthSetup) {
 			require.NoError(t, connection.Close())
 		}()
 
-		response, err := cloudsecretspb.NewControllerClient(connection).GetInfo(
+		response, err := grpcapi.NewControllerClient(connection).GetInfo(
 			grpcCtx,
-			&cloudsecretspb.GetInfoRequest{},
+			&grpcapi.GetInfoRequest{},
 		)
 		require.NoError(t, err)
 		require.Equal(t, "HashiCorp Vault", response.GetProvider().GetName())

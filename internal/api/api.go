@@ -9,7 +9,7 @@ import (
 	"github.com/swarm-deploy/cloud-secrets/internal/application/cs"
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
 	cloudsecretssync "github.com/swarm-deploy/cloud-secrets/internal/sync"
-	cloudsecretspb "github.com/swarm-deploy/cloud-secrets/pkg/api/cloudsecrets"
+	grpcapi "github.com/swarm-deploy/cloud-secrets/pkg/grpc-api"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -29,7 +29,7 @@ type Syncer interface {
 
 // Service implements the cloud-secrets integration API.
 type Service struct {
-	cloudsecretspb.UnimplementedControllerServer
+	grpcapi.UnimplementedControllerServer
 
 	version  string
 	provider contracts.ProviderDefinition
@@ -46,10 +46,10 @@ func NewService(version string, provider contracts.ProviderDefinition, syncer Sy
 }
 
 // GetInfo returns process and provider metadata.
-func (s *Service) GetInfo(context.Context, *cloudsecretspb.GetInfoRequest) (*cloudsecretspb.GetInfoResponse, error) {
-	response := &cloudsecretspb.GetInfoResponse{
+func (s *Service) GetInfo(context.Context, *grpcapi.GetInfoRequest) (*grpcapi.GetInfoResponse, error) {
+	response := &grpcapi.GetInfoResponse{
 		Version: s.version,
-		Provider: &cloudsecretspb.Provider{
+		Provider: &grpcapi.Provider{
 			Name: s.provider.Name,
 			Link: s.provider.URL,
 		},
@@ -66,7 +66,7 @@ func (s *Service) GetInfo(context.Context, *cloudsecretspb.GetInfoRequest) (*clo
 }
 
 // Sync triggers the normal synchronization flow on demand.
-func (s *Service) Sync(ctx context.Context, _ *cloudsecretspb.SyncRequest) (*cloudsecretspb.SyncResponse, error) {
+func (s *Service) Sync(ctx context.Context, _ *grpcapi.SyncRequest) (*grpcapi.SyncResponse, error) {
 	result, err := s.syncer.Sync(ctx, grpcSyncTrigger)
 	if err != nil {
 		switch {
@@ -79,7 +79,7 @@ func (s *Service) Sync(ctx context.Context, _ *cloudsecretspb.SyncRequest) (*clo
 		}
 	}
 
-	return &cloudsecretspb.SyncResponse{
+	return &grpcapi.SyncResponse{
 		Created:   uint32(result.Created),        //nolint:gosec // counters are non-negative and bounded by Docker resources
 		Updated:   uint32(result.Updated),        //nolint:gosec // counters are non-negative and bounded by Docker resources
 		Removed:   uint32(result.RemovedSecrets), //nolint:gosec // counters are non-negative and bounded by Docker resources

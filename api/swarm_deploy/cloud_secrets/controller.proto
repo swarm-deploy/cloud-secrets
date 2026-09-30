@@ -4,7 +4,7 @@ package swarm_deploy.cloud_secrets;
 
 import "google/protobuf/timestamp.proto";
 
-option go_package = "github.com/swarm-deploy/cloud-secrets/pkg/api/cloudsecrets;cloudsecretspb";
+option go_package = "github.com/swarm-deploy/cloud-secrets/pkg/grpc-api;grpcapi";
 
 service Controller {
   rpc GetInfo(GetInfoRequest) returns (GetInfoResponse);

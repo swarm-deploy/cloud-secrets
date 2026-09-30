@@ -55,18 +55,18 @@ func (mr *MockProviderMockRecorder) Definition() *gomock.Call {
 }
 
 // GetSecretPayload mocks base method.
-func (m *MockProvider) GetSecretPayload(ctx context.Context, key string) ([]byte, error) {
+func (m *MockProvider) GetSecretPayload(ctx context.Context, path string) ([]byte, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "GetSecretPayload", ctx, key)
+	ret := m.ctrl.Call(m, "GetSecretPayload", ctx, path)
 	ret0, _ := ret[0].([]byte)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
 // GetSecretPayload indicates an expected call of GetSecretPayload.
-func (mr *MockProviderMockRecorder) GetSecretPayload(ctx, key any) *gomock.Call {
+func (mr *MockProviderMockRecorder) GetSecretPayload(ctx, path any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecretPayload", reflect.TypeOf((*MockProvider)(nil).GetSecretPayload), ctx, key)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetSecretPayload", reflect.TypeOf((*MockProvider)(nil).GetSecretPayload), ctx, path)
 }
 
 // ListSecrets mocks base method.

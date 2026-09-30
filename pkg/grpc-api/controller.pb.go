@@ -4,7 +4,7 @@
 // 	protoc        v6.31.1
 // source: swarm_deploy/cloud_secrets/controller.proto
 
-package cloudsecretspb
+package grpcapi
 
 import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
@@ -307,7 +307,7 @@ const file_swarm_deploy_cloud_secrets_controller_proto_rawDesc = "" +
 	"\n" +
 	"Controller\x12b\n" +
 	"\aGetInfo\x12*.swarm_deploy.cloud_secrets.GetInfoRequest\x1a+.swarm_deploy.cloud_secrets.GetInfoResponse\x12Y\n" +
-	"\x04Sync\x12'.swarm_deploy.cloud_secrets.SyncRequest\x1a(.swarm_deploy.cloud_secrets.SyncResponseBKZIgithub.com/swarm-deploy/cloud-secrets/pkg/api/cloudsecrets;cloudsecretspbb\x06proto3"
+	"\x04Sync\x12'.swarm_deploy.cloud_secrets.SyncRequest\x1a(.swarm_deploy.cloud_secrets.SyncResponseB<Z:github.com/swarm-deploy/cloud-secrets/pkg/grpc-api;grpcapib\x06proto3"
 
 var (
 	file_swarm_deploy_cloud_secrets_controller_proto_rawDescOnce sync.Once

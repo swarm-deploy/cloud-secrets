@@ -11,7 +11,7 @@ import (
 	"github.com/swarm-deploy/cloud-secrets/internal/application/cs"
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
 	cloudsecretssync "github.com/swarm-deploy/cloud-secrets/internal/sync"
-	cloudsecretspb "github.com/swarm-deploy/cloud-secrets/pkg/api/cloudsecrets"
+	grpcapi "github.com/swarm-deploy/cloud-secrets/pkg/grpc-api"
 	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -53,7 +53,7 @@ func TestService_GetInfo(t *testing.T) {
 				URL:  "https://vault.example.com",
 			}, syncer)
 
-			response, err := service.GetInfo(context.Background(), &cloudsecretspb.GetInfoRequest{})
+			response, err := service.GetInfo(context.Background(), &grpcapi.GetInfoRequest{})
 			require.NoError(t, err)
 			assert.Equal(t, "v1.2.3", response.GetVersion())
 			assert.Equal(t, "HashiCorp Vault", response.GetProvider().GetName())
@@ -90,7 +90,7 @@ func TestService_Sync(t *testing.T) {
 	}, nil)
 
 	service := NewService("v1.2.3", contracts.ProviderDefinition{}, syncer)
-	response, err := service.Sync(context.Background(), &cloudsecretspb.SyncRequest{})
+	response, err := service.Sync(context.Background(), &grpcapi.SyncRequest{})
 
 	require.NoError(t, err)
 	assert.Equal(t, uint32(2), response.GetCreated())
@@ -122,7 +122,7 @@ func TestService_Sync_Error(t *testing.T) {
 			syncer.EXPECT().Sync(gomock.Any(), grpcSyncTrigger).Return(cloudsecretssync.Result{}, tt.err)
 			service := NewService("v1.2.3", contracts.ProviderDefinition{}, syncer)
 
-			response, err := service.Sync(context.Background(), &cloudsecretspb.SyncRequest{})
+			response, err := service.Sync(context.Background(), &grpcapi.SyncRequest{})
 
 			assert.Nil(t, response)
 			require.Error(t, err)

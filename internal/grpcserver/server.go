@@ -7,7 +7,7 @@ import (
 	"net"
 
 	"github.com/swarm-deploy/cloud-secrets/internal/api"
-	cloudsecretspb "github.com/swarm-deploy/cloud-secrets/pkg/api/cloudsecrets"
+	grpcapi "github.com/swarm-deploy/cloud-secrets/pkg/grpc-api"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
@@ -25,7 +25,7 @@ func New(address string, controllerService *api.Service) *Server {
 	grpcServer := grpc.NewServer()
 	healthServer := health.NewServer()
 
-	cloudsecretspb.RegisterControllerServer(grpcServer, controllerService)
+	grpcapi.RegisterControllerServer(grpcServer, controllerService)
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
 
 	return &Server{
@@ -48,7 +48,7 @@ func (s *Server) Run(ctx context.Context) error {
 func (s *Server) serve(listener net.Listener) error {
 	s.healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	s.healthServer.SetServingStatus(
-		cloudsecretspb.Controller_ServiceDesc.ServiceName,
+		grpcapi.Controller_ServiceDesc.ServiceName,
 		grpc_health_v1.HealthCheckResponse_SERVING,
 	)
 

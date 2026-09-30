@@ -4,7 +4,7 @@
 // - protoc             v6.31.1
 // source: swarm_deploy/cloud_secrets/controller.proto
 
-package cloudsecretspb
+package grpcapi
 
 import (
 	context "context"
