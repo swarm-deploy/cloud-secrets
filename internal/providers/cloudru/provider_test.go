@@ -14,7 +14,7 @@ func TestProvider_Definition(t *testing.T) {
 	definition := provider.Definition()
 
 	assert.Equal(t, "Cloud.ru Secret Manager", definition.Name)
-	assert.Empty(t, definition.Links.Doc)
+	assert.Equal(t, "https://cloud.ru/docs/scsm/ug/index", definition.Links.Doc)
 	assert.Equal(
 		t,
 		"https://console.cloud.ru/spa/secret-manager/list?projectId=project-id",
