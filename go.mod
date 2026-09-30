@@ -19,6 +19,7 @@ require (
 	github.com/moby/moby/client v0.5.1
 	github.com/prometheus/client_golang v1.23.2
 	github.com/stretchr/testify v1.11.1
+	github.com/swarm-deploy/cloud-secrets/pkg/grpc-api v0.0.0
 	github.com/swarm-deploy/dockertester v0.1.0
 	go.uber.org/mock v0.6.0
 	google.golang.org/grpc v1.83.0
@@ -76,3 +77,5 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace github.com/swarm-deploy/cloud-secrets/pkg/grpc-api => ./pkg/grpc-api
