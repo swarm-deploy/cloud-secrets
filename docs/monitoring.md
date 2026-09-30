@@ -30,6 +30,7 @@ Application metrics use the `cloud_secrets` namespace.
 | ---------- | ------------------------------------------------- |
 | `interval` | Synchronization started by the refresh interval.  |
 | `sighup`   | Synchronization started after receiving `SIGHUP`. |
+| `grpc`     | Synchronization started through the gRPC API.       |
 
 ### Docker operations
 
