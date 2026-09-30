@@ -51,8 +51,10 @@ func (s *Service) GetInfo(context.Context, *grpcapi.GetInfoRequest) (*grpcapi.Ge
 		Version: s.version,
 		Provider: &grpcapi.Provider{
 			Name: s.provider.Name,
-			Link: s.provider.URL,
 		},
+	}
+	if s.provider.URL != "" {
+		response.Provider.Links = &grpcapi.Links{Doc: s.provider.URL}
 	}
 
 	if lastSyncAt, ok := s.syncer.LastSyncAt(); ok {

@@ -129,7 +129,7 @@ func (x *GetInfoResponse) GetNextSyncAt() *timestamppb.Timestamp {
 type Provider struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	Link          string                 `protobuf:"bytes,2,opt,name=link,proto3" json:"link,omitempty"`
+	Links         *Links                 `protobuf:"bytes,2,opt,name=links,proto3" json:"links,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -171,9 +171,53 @@ func (x *Provider) GetName() string {
 	return ""
 }
 
-func (x *Provider) GetLink() string {
+func (x *Provider) GetLinks() *Links {
 	if x != nil {
-		return x.Link
+		return x.Links
+	}
+	return nil
+}
+
+type Links struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Doc           string                 `protobuf:"bytes,1,opt,name=doc,proto3" json:"doc,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Links) Reset() {
+	*x = Links{}
+	mi := &file_swarm_deploy_cloud_secrets_controller_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Links) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Links) ProtoMessage() {}
+
+func (x *Links) ProtoReflect() protoreflect.Message {
+	mi := &file_swarm_deploy_cloud_secrets_controller_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Links.ProtoReflect.Descriptor instead.
+func (*Links) Descriptor() ([]byte, []int) {
+	return file_swarm_deploy_cloud_secrets_controller_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *Links) GetDoc() string {
+	if x != nil {
+		return x.Doc
 	}
 	return ""
 }
@@ -186,7 +230,7 @@ type SyncRequest struct {
 
 func (x *SyncRequest) Reset() {
 	*x = SyncRequest{}
-	mi := &file_swarm_deploy_cloud_secrets_controller_proto_msgTypes[3]
+	mi := &file_swarm_deploy_cloud_secrets_controller_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -198,7 +242,7 @@ func (x *SyncRequest) String() string {
 func (*SyncRequest) ProtoMessage() {}
 
 func (x *SyncRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_swarm_deploy_cloud_secrets_controller_proto_msgTypes[3]
+	mi := &file_swarm_deploy_cloud_secrets_controller_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -211,7 +255,7 @@ func (x *SyncRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncRequest.ProtoReflect.Descriptor instead.
 func (*SyncRequest) Descriptor() ([]byte, []int) {
-	return file_swarm_deploy_cloud_secrets_controller_proto_rawDescGZIP(), []int{3}
+	return file_swarm_deploy_cloud_secrets_controller_proto_rawDescGZIP(), []int{4}
 }
 
 type SyncResponse struct {
@@ -226,7 +270,7 @@ type SyncResponse struct {
 
 func (x *SyncResponse) Reset() {
 	*x = SyncResponse{}
-	mi := &file_swarm_deploy_cloud_secrets_controller_proto_msgTypes[4]
+	mi := &file_swarm_deploy_cloud_secrets_controller_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -238,7 +282,7 @@ func (x *SyncResponse) String() string {
 func (*SyncResponse) ProtoMessage() {}
 
 func (x *SyncResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_swarm_deploy_cloud_secrets_controller_proto_msgTypes[4]
+	mi := &file_swarm_deploy_cloud_secrets_controller_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -251,7 +295,7 @@ func (x *SyncResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SyncResponse.ProtoReflect.Descriptor instead.
 func (*SyncResponse) Descriptor() ([]byte, []int) {
-	return file_swarm_deploy_cloud_secrets_controller_proto_rawDescGZIP(), []int{4}
+	return file_swarm_deploy_cloud_secrets_controller_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *SyncResponse) GetCreated() uint32 {
@@ -294,10 +338,12 @@ const file_swarm_deploy_cloud_secrets_controller_proto_rawDesc = "" +
 	"\flast_sync_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"lastSyncAt\x12<\n" +
 	"\fnext_sync_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"nextSyncAt\"2\n" +
+	"nextSyncAt\"W\n" +
 	"\bProvider\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
-	"\x04link\x18\x02 \x01(\tR\x04link\"\r\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x127\n" +
+	"\x05links\x18\x02 \x01(\v2!.swarm_deploy.cloud_secrets.LinksR\x05links\"\x19\n" +
+	"\x05Links\x12\x10\n" +
+	"\x03doc\x18\x01 \x01(\tR\x03doc\"\r\n" +
 	"\vSyncRequest\"z\n" +
 	"\fSyncResponse\x12\x18\n" +
 	"\acreated\x18\x01 \x01(\rR\acreated\x12\x18\n" +
@@ -321,28 +367,30 @@ func file_swarm_deploy_cloud_secrets_controller_proto_rawDescGZIP() []byte {
 	return file_swarm_deploy_cloud_secrets_controller_proto_rawDescData
 }
 
-var file_swarm_deploy_cloud_secrets_controller_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_swarm_deploy_cloud_secrets_controller_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_swarm_deploy_cloud_secrets_controller_proto_goTypes = []any{
 	(*GetInfoRequest)(nil),        // 0: swarm_deploy.cloud_secrets.GetInfoRequest
 	(*GetInfoResponse)(nil),       // 1: swarm_deploy.cloud_secrets.GetInfoResponse
 	(*Provider)(nil),              // 2: swarm_deploy.cloud_secrets.Provider
-	(*SyncRequest)(nil),           // 3: swarm_deploy.cloud_secrets.SyncRequest
-	(*SyncResponse)(nil),          // 4: swarm_deploy.cloud_secrets.SyncResponse
-	(*timestamppb.Timestamp)(nil), // 5: google.protobuf.Timestamp
+	(*Links)(nil),                 // 3: swarm_deploy.cloud_secrets.Links
+	(*SyncRequest)(nil),           // 4: swarm_deploy.cloud_secrets.SyncRequest
+	(*SyncResponse)(nil),          // 5: swarm_deploy.cloud_secrets.SyncResponse
+	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
 }
 var file_swarm_deploy_cloud_secrets_controller_proto_depIdxs = []int32{
 	2, // 0: swarm_deploy.cloud_secrets.GetInfoResponse.provider:type_name -> swarm_deploy.cloud_secrets.Provider
-	5, // 1: swarm_deploy.cloud_secrets.GetInfoResponse.last_sync_at:type_name -> google.protobuf.Timestamp
-	5, // 2: swarm_deploy.cloud_secrets.GetInfoResponse.next_sync_at:type_name -> google.protobuf.Timestamp
-	0, // 3: swarm_deploy.cloud_secrets.Controller.GetInfo:input_type -> swarm_deploy.cloud_secrets.GetInfoRequest
-	3, // 4: swarm_deploy.cloud_secrets.Controller.Sync:input_type -> swarm_deploy.cloud_secrets.SyncRequest
-	1, // 5: swarm_deploy.cloud_secrets.Controller.GetInfo:output_type -> swarm_deploy.cloud_secrets.GetInfoResponse
-	4, // 6: swarm_deploy.cloud_secrets.Controller.Sync:output_type -> swarm_deploy.cloud_secrets.SyncResponse
-	5, // [5:7] is the sub-list for method output_type
-	3, // [3:5] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	6, // 1: swarm_deploy.cloud_secrets.GetInfoResponse.last_sync_at:type_name -> google.protobuf.Timestamp
+	6, // 2: swarm_deploy.cloud_secrets.GetInfoResponse.next_sync_at:type_name -> google.protobuf.Timestamp
+	3, // 3: swarm_deploy.cloud_secrets.Provider.links:type_name -> swarm_deploy.cloud_secrets.Links
+	0, // 4: swarm_deploy.cloud_secrets.Controller.GetInfo:input_type -> swarm_deploy.cloud_secrets.GetInfoRequest
+	4, // 5: swarm_deploy.cloud_secrets.Controller.Sync:input_type -> swarm_deploy.cloud_secrets.SyncRequest
+	1, // 6: swarm_deploy.cloud_secrets.Controller.GetInfo:output_type -> swarm_deploy.cloud_secrets.GetInfoResponse
+	5, // 7: swarm_deploy.cloud_secrets.Controller.Sync:output_type -> swarm_deploy.cloud_secrets.SyncResponse
+	6, // [6:8] is the sub-list for method output_type
+	4, // [4:6] is the sub-list for method input_type
+	4, // [4:4] is the sub-list for extension type_name
+	4, // [4:4] is the sub-list for extension extendee
+	0, // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_swarm_deploy_cloud_secrets_controller_proto_init() }
@@ -356,7 +404,7 @@ func file_swarm_deploy_cloud_secrets_controller_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_swarm_deploy_cloud_secrets_controller_proto_rawDesc), len(file_swarm_deploy_cloud_secrets_controller_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

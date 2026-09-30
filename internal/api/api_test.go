@@ -23,19 +23,21 @@ func TestService_GetInfo(t *testing.T) {
 	lastSyncAt := time.Date(2026, time.September, 29, 21, 0, 0, 0, time.UTC)
 	nextSyncAt := lastSyncAt.Add(5 * time.Minute)
 	tests := []struct {
-		name       string
-		lastSyncAt time.Time
-		hasSync    bool
-		nextSyncAt time.Time
-		hasNext    bool
+		name        string
+		lastSyncAt  time.Time
+		hasSync     bool
+		nextSyncAt  time.Time
+		hasNext     bool
+		providerURL string
 	}{
 		{name: "without successful sync"},
 		{
-			name:       "with successful sync and schedule",
-			lastSyncAt: lastSyncAt,
-			hasSync:    true,
-			nextSyncAt: nextSyncAt,
-			hasNext:    true,
+			name:        "with successful sync and schedule",
+			lastSyncAt:  lastSyncAt,
+			hasSync:     true,
+			nextSyncAt:  nextSyncAt,
+			hasNext:     true,
+			providerURL: "https://vault.example.com",
 		},
 	}
 
@@ -50,14 +52,19 @@ func TestService_GetInfo(t *testing.T) {
 
 			service := NewService("v1.2.3", contracts.ProviderDefinition{
 				Name: "HashiCorp Vault",
-				URL:  "https://vault.example.com",
+				URL:  tt.providerURL,
 			}, syncer)
 
 			response, err := service.GetInfo(context.Background(), &grpcapi.GetInfoRequest{})
 			require.NoError(t, err)
 			assert.Equal(t, "v1.2.3", response.GetVersion())
 			assert.Equal(t, "HashiCorp Vault", response.GetProvider().GetName())
-			assert.Equal(t, "https://vault.example.com", response.GetProvider().GetLink())
+			if tt.providerURL != "" {
+				require.NotNil(t, response.GetProvider().GetLinks())
+				assert.Equal(t, tt.providerURL, response.GetProvider().GetLinks().GetDoc())
+			} else {
+				assert.Nil(t, response.GetProvider().GetLinks())
+			}
 
 			if tt.hasSync {
 				require.NotNil(t, response.GetLastSyncAt())
