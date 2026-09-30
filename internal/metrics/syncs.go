@@ -12,7 +12,7 @@ type Syncs interface {
 
 	// RecordRun increments sync run counter by trigger.
 	RecordRun(trigger string)
-	// SetLastSyncAt records unix timestamp of the latest successful sync.
+	// SetLastSyncAt records unix timestamp of the latest completed sync.
 	SetLastSyncAt(t time.Time)
 }
 
@@ -37,7 +37,7 @@ func newPrometheusSyncs(namespace string) *prometheusSyncs {
 				Namespace: namespace,
 				Subsystem: "syncs",
 				Name:      "last_sync_at_unix",
-				Help:      "Unix timestamp of the latest successful sync run.",
+				Help:      "Unix timestamp of the latest completed sync run.",
 			},
 		),
 	}

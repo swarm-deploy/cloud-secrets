@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/moby/moby/api/types/swarm"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/swarm-deploy/cloud-secrets/internal/engine"
@@ -54,6 +55,8 @@ func TestApplication_Sync_LastSyncAt(t *testing.T) {
 			tt.setup(engineClient, provider)
 
 			metricsGroup := metrics.NewGroup(metrics.CreateGroupParams{Namespace: "test"})
+			registry := prometheus.NewRegistry()
+			require.NoError(t, registry.Register(metricsGroup))
 			app := &Application{
 				metrics: metricsGroup,
 				synchronizer: cloudsecretssync.NewSynchronizer(
@@ -75,6 +78,7 @@ func TestApplication_Sync_LastSyncAt(t *testing.T) {
 			lastSyncAt, ok := app.LastSyncAt()
 			assert.Equal(t, tt.wantTime, ok)
 			assert.Equal(t, tt.wantTime, !lastSyncAt.IsZero())
+			assert.Greater(t, prometheusGaugeValue(t, registry, "test_syncs_last_sync_at_unix"), float64(0))
 		})
 	}
 }
@@ -105,4 +109,54 @@ func TestApplication_Run_SetsNextSyncAt(t *testing.T) {
 	cancel()
 	require.NoError(t, <-runResult)
 	require.NoError(t, app.Close())
+}
+
+func TestApplication_NextSyncAt_AdvancesPastSchedule(t *testing.T) {
+	t.Parallel()
+
+	const refreshInterval = time.Hour
+	initialNextSyncAt := time.Now().Add(-30 * time.Minute)
+	app := &Application{}
+	app.cfg.CloudSecrets.RefreshInterval = refreshInterval
+	app.setNextSyncAt(initialNextSyncAt)
+
+	nextSyncAt, ok := app.NextSyncAt()
+
+	require.True(t, ok)
+	assert.Equal(t, initialNextSyncAt.Add(refreshInterval), nextSyncAt)
+	assert.True(t, nextSyncAt.After(time.Now()))
+}
+
+func TestApplication_NextSyncAt_PreservesFutureSchedule(t *testing.T) {
+	t.Parallel()
+
+	const refreshInterval = time.Hour
+	initialNextSyncAt := time.Now().Add(30 * time.Minute)
+	app := &Application{}
+	app.cfg.CloudSecrets.RefreshInterval = refreshInterval
+	app.setNextSyncAt(initialNextSyncAt)
+
+	nextSyncAt, ok := app.NextSyncAt()
+
+	require.True(t, ok)
+	assert.Equal(t, initialNextSyncAt, nextSyncAt)
+}
+
+func prometheusGaugeValue(t *testing.T, gatherer prometheus.Gatherer, name string) float64 {
+	t.Helper()
+
+	metricFamilies, err := gatherer.Gather()
+	require.NoError(t, err)
+
+	for _, family := range metricFamilies {
+		if family.GetName() != name {
+			continue
+		}
+
+		require.Len(t, family.GetMetric(), 1)
+		return family.GetMetric()[0].GetGauge().GetValue()
+	}
+
+	require.Failf(t, "metric not found", "metric %q was not gathered", name)
+	return 0
 }

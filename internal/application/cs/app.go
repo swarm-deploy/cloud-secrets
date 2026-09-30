@@ -104,8 +104,8 @@ func (app *Application) Run(ctx context.Context) error {
 			slog.InfoContext(ctx, "received SIGHUP, run sync")
 
 			runSync("sighup")
-		case tickAt := <-app.ticker.C:
-			app.setNextSyncAt(tickAt.Add(app.cfg.CloudSecrets.RefreshInterval))
+		case <-app.ticker.C:
+			app.advanceNextSyncAt(time.Now())
 			runSync("interval")
 		}
 	}
@@ -122,14 +122,15 @@ func (app *Application) Sync(ctx context.Context, trigger string) (sync.Result, 
 	app.metrics.Syncs.RecordRun(trigger)
 
 	result, err := app.synchronizer.Sync(ctx)
+	completedAt := time.Now()
+	app.metrics.Syncs.SetLastSyncAt(completedAt)
+	app.advanceNextSyncAt(completedAt)
 	if err != nil {
 		slog.ErrorContext(ctx, "failed to sync secrets", slog.String("trigger", trigger), slog.Any("err", err))
 		return result, err
 	}
 
-	now := time.Now()
-	app.lastSyncAt.Store(&now)
-	app.metrics.Syncs.SetLastSyncAt(now)
+	app.lastSyncAt.Store(&completedAt)
 
 	slog.InfoContext(ctx, "sync finished",
 		slog.String("trigger", trigger),
@@ -155,16 +156,30 @@ func (app *Application) LastSyncAt() (time.Time, bool) {
 
 // NextSyncAt returns the next scheduled interval synchronization time.
 func (app *Application) NextSyncAt() (time.Time, bool) {
-	nextSyncAt := app.nextSyncAt.Load()
-	if nextSyncAt == nil {
-		return time.Time{}, false
-	}
-
-	return *nextSyncAt, true
+	return app.advanceNextSyncAt(time.Now())
 }
 
 func (app *Application) setNextSyncAt(nextSyncAt time.Time) {
 	app.nextSyncAt.Store(&nextSyncAt)
+}
+
+func (app *Application) advanceNextSyncAt(now time.Time) (time.Time, bool) {
+	for {
+		nextSyncAt := app.nextSyncAt.Load()
+		if nextSyncAt == nil {
+			return time.Time{}, false
+		}
+		if nextSyncAt.After(now) {
+			return *nextSyncAt, true
+		}
+
+		missedIntervals := int64(now.Sub(*nextSyncAt)/app.cfg.CloudSecrets.RefreshInterval) + 1
+		advanceBy := time.Duration(missedIntervals * int64(app.cfg.CloudSecrets.RefreshInterval))
+		advanced := nextSyncAt.Add(advanceBy)
+		if app.nextSyncAt.CompareAndSwap(nextSyncAt, &advanced) {
+			return advanced, true
+		}
+	}
 }
 
 // ProviderDefinition returns human-readable metadata for the configured provider.
