@@ -17,6 +17,7 @@ message GetInfoResponse {
   string version = 1;
   Provider provider = 2;
   google.protobuf.Timestamp last_sync_at = 3;
+  google.protobuf.Timestamp next_sync_at = 4;
 }
 
 message Provider {

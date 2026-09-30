@@ -36,6 +36,7 @@ type Application struct {
 
 	synchronizing atomic.Bool
 	lastSyncAt    atomic.Pointer[time.Time]
+	nextSyncAt    atomic.Pointer[time.Time]
 }
 
 // ErrSyncInProgress is returned when another synchronization is already running.
@@ -80,6 +81,7 @@ func (app *Application) Run(ctx context.Context) error {
 	slog.InfoContext(ctx, "setup ticker", slog.String("interval", app.cfg.CloudSecrets.RefreshInterval.String()))
 
 	app.ticker = time.NewTicker(app.cfg.CloudSecrets.RefreshInterval)
+	app.setNextSyncAt(time.Now().Add(app.cfg.CloudSecrets.RefreshInterval))
 
 	sighupChannel := make(chan os.Signal, sighupBuf)
 
@@ -102,7 +104,8 @@ func (app *Application) Run(ctx context.Context) error {
 			slog.InfoContext(ctx, "received SIGHUP, run sync")
 
 			runSync("sighup")
-		case <-app.ticker.C:
+		case tickAt := <-app.ticker.C:
+			app.setNextSyncAt(tickAt.Add(app.cfg.CloudSecrets.RefreshInterval))
 			runSync("interval")
 		}
 	}
@@ -148,6 +151,20 @@ func (app *Application) LastSyncAt() (time.Time, bool) {
 	}
 
 	return *lastSyncAt, true
+}
+
+// NextSyncAt returns the next scheduled interval synchronization time.
+func (app *Application) NextSyncAt() (time.Time, bool) {
+	nextSyncAt := app.nextSyncAt.Load()
+	if nextSyncAt == nil {
+		return time.Time{}, false
+	}
+
+	return *nextSyncAt, true
+}
+
+func (app *Application) setNextSyncAt(nextSyncAt time.Time) {
+	app.nextSyncAt.Store(&nextSyncAt)
 }
 
 // ProviderDefinition returns human-readable metadata for the configured provider.

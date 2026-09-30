@@ -63,6 +63,7 @@ type GetInfoResponse struct {
 	Version       string                 `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
 	Provider      *Provider              `protobuf:"bytes,2,opt,name=provider,proto3" json:"provider,omitempty"`
 	LastSyncAt    *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=last_sync_at,json=lastSyncAt,proto3" json:"last_sync_at,omitempty"`
+	NextSyncAt    *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=next_sync_at,json=nextSyncAt,proto3" json:"next_sync_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -114,6 +115,13 @@ func (x *GetInfoResponse) GetProvider() *Provider {
 func (x *GetInfoResponse) GetLastSyncAt() *timestamppb.Timestamp {
 	if x != nil {
 		return x.LastSyncAt
+	}
+	return nil
+}
+
+func (x *GetInfoResponse) GetNextSyncAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.NextSyncAt
 	}
 	return nil
 }
@@ -279,12 +287,14 @@ var File_swarm_deploy_cloud_secrets_controller_proto protoreflect.FileDescriptor
 const file_swarm_deploy_cloud_secrets_controller_proto_rawDesc = "" +
 	"\n" +
 	"+swarm_deploy/cloud_secrets/controller.proto\x12\x1aswarm_deploy.cloud_secrets\x1a\x1fgoogle/protobuf/timestamp.proto\"\x10\n" +
-	"\x0eGetInfoRequest\"\xab\x01\n" +
+	"\x0eGetInfoRequest\"\xe9\x01\n" +
 	"\x0fGetInfoResponse\x12\x18\n" +
 	"\aversion\x18\x01 \x01(\tR\aversion\x12@\n" +
 	"\bprovider\x18\x02 \x01(\v2$.swarm_deploy.cloud_secrets.ProviderR\bprovider\x12<\n" +
 	"\flast_sync_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"lastSyncAt\"2\n" +
+	"lastSyncAt\x12<\n" +
+	"\fnext_sync_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"nextSyncAt\"2\n" +
 	"\bProvider\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04link\x18\x02 \x01(\tR\x04link\"\r\n" +
@@ -323,15 +333,16 @@ var file_swarm_deploy_cloud_secrets_controller_proto_goTypes = []any{
 var file_swarm_deploy_cloud_secrets_controller_proto_depIdxs = []int32{
 	2, // 0: swarm_deploy.cloud_secrets.GetInfoResponse.provider:type_name -> swarm_deploy.cloud_secrets.Provider
 	5, // 1: swarm_deploy.cloud_secrets.GetInfoResponse.last_sync_at:type_name -> google.protobuf.Timestamp
-	0, // 2: swarm_deploy.cloud_secrets.Controller.GetInfo:input_type -> swarm_deploy.cloud_secrets.GetInfoRequest
-	3, // 3: swarm_deploy.cloud_secrets.Controller.Sync:input_type -> swarm_deploy.cloud_secrets.SyncRequest
-	1, // 4: swarm_deploy.cloud_secrets.Controller.GetInfo:output_type -> swarm_deploy.cloud_secrets.GetInfoResponse
-	4, // 5: swarm_deploy.cloud_secrets.Controller.Sync:output_type -> swarm_deploy.cloud_secrets.SyncResponse
-	4, // [4:6] is the sub-list for method output_type
-	2, // [2:4] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	5, // 2: swarm_deploy.cloud_secrets.GetInfoResponse.next_sync_at:type_name -> google.protobuf.Timestamp
+	0, // 3: swarm_deploy.cloud_secrets.Controller.GetInfo:input_type -> swarm_deploy.cloud_secrets.GetInfoRequest
+	3, // 4: swarm_deploy.cloud_secrets.Controller.Sync:input_type -> swarm_deploy.cloud_secrets.SyncRequest
+	1, // 5: swarm_deploy.cloud_secrets.Controller.GetInfo:output_type -> swarm_deploy.cloud_secrets.GetInfoResponse
+	4, // 6: swarm_deploy.cloud_secrets.Controller.Sync:output_type -> swarm_deploy.cloud_secrets.SyncResponse
+	5, // [5:7] is the sub-list for method output_type
+	3, // [3:5] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_swarm_deploy_cloud_secrets_controller_proto_init() }

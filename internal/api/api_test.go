@@ -21,13 +21,22 @@ func TestService_GetInfo(t *testing.T) {
 	t.Parallel()
 
 	lastSyncAt := time.Date(2026, time.September, 29, 21, 0, 0, 0, time.UTC)
+	nextSyncAt := lastSyncAt.Add(5 * time.Minute)
 	tests := []struct {
 		name       string
 		lastSyncAt time.Time
 		hasSync    bool
+		nextSyncAt time.Time
+		hasNext    bool
 	}{
 		{name: "without successful sync"},
-		{name: "with successful sync", lastSyncAt: lastSyncAt, hasSync: true},
+		{
+			name:       "with successful sync and schedule",
+			lastSyncAt: lastSyncAt,
+			hasSync:    true,
+			nextSyncAt: nextSyncAt,
+			hasNext:    true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -37,6 +46,7 @@ func TestService_GetInfo(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			syncer := NewMockSyncer(ctrl)
 			syncer.EXPECT().LastSyncAt().Return(tt.lastSyncAt, tt.hasSync)
+			syncer.EXPECT().NextSyncAt().Return(tt.nextSyncAt, tt.hasNext)
 
 			service := NewService("v1.2.3", contracts.ProviderDefinition{
 				Name: "HashiCorp Vault",
@@ -54,6 +64,13 @@ func TestService_GetInfo(t *testing.T) {
 				assert.Equal(t, lastSyncAt, response.GetLastSyncAt().AsTime())
 			} else {
 				assert.Nil(t, response.GetLastSyncAt())
+			}
+
+			if tt.hasNext {
+				require.NotNil(t, response.GetNextSyncAt())
+				assert.Equal(t, nextSyncAt, response.GetNextSyncAt().AsTime())
+			} else {
+				assert.Nil(t, response.GetNextSyncAt())
 			}
 		})
 	}

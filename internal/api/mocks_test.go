@@ -57,6 +57,21 @@ func (mr *MockSyncerMockRecorder) LastSyncAt() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "LastSyncAt", reflect.TypeOf((*MockSyncer)(nil).LastSyncAt))
 }
 
+// NextSyncAt mocks base method.
+func (m *MockSyncer) NextSyncAt() (time.Time, bool) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "NextSyncAt")
+	ret0, _ := ret[0].(time.Time)
+	ret1, _ := ret[1].(bool)
+	return ret0, ret1
+}
+
+// NextSyncAt indicates an expected call of NextSyncAt.
+func (mr *MockSyncerMockRecorder) NextSyncAt() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "NextSyncAt", reflect.TypeOf((*MockSyncer)(nil).NextSyncAt))
+}
+
 // Sync mocks base method.
 func (m *MockSyncer) Sync(ctx context.Context, trigger string) (sync.Result, error) {
 	m.ctrl.T.Helper()

@@ -23,6 +23,8 @@ type Syncer interface {
 	Sync(ctx context.Context, trigger string) (cloudsecretssync.Result, error)
 	// LastSyncAt returns the latest successful synchronization known by the process.
 	LastSyncAt() (time.Time, bool)
+	// NextSyncAt returns the next scheduled interval synchronization time.
+	NextSyncAt() (time.Time, bool)
 }
 
 // Service implements the cloud-secrets integration API.
@@ -55,6 +57,9 @@ func (s *Service) GetInfo(context.Context, *cloudsecretspb.GetInfoRequest) (*clo
 
 	if lastSyncAt, ok := s.syncer.LastSyncAt(); ok {
 		response.LastSyncAt = timestamppb.New(lastSyncAt)
+	}
+	if nextSyncAt, ok := s.syncer.NextSyncAt(); ok {
+		response.NextSyncAt = timestamppb.New(nextSyncAt)
 	}
 
 	return response, nil

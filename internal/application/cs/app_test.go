@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/moby/moby/api/types/swarm"
 	"github.com/stretchr/testify/assert"
@@ -76,4 +77,32 @@ func TestApplication_Sync_LastSyncAt(t *testing.T) {
 			assert.Equal(t, tt.wantTime, !lastSyncAt.IsZero())
 		})
 	}
+}
+
+func TestApplication_Run_SetsNextSyncAt(t *testing.T) {
+	t.Parallel()
+
+	const refreshInterval = time.Hour
+	app := &Application{}
+	app.cfg.CloudSecrets.RefreshInterval = refreshInterval
+
+	ctx, cancel := context.WithCancel(context.Background())
+	startedAt := time.Now()
+	runResult := make(chan error, 1)
+	go func() {
+		runResult <- app.Run(ctx)
+	}()
+
+	require.Eventually(t, func() bool {
+		_, ok := app.NextSyncAt()
+		return ok
+	}, time.Second, 10*time.Millisecond)
+
+	nextSyncAt, ok := app.NextSyncAt()
+	require.True(t, ok)
+	assert.WithinDuration(t, startedAt.Add(refreshInterval), nextSyncAt, time.Second)
+
+	cancel()
+	require.NoError(t, <-runResult)
+	require.NoError(t, app.Close())
 }

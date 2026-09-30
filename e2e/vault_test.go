@@ -97,6 +97,9 @@ func testVault(t *testing.T, setupAuth vaultAuthSetup) {
 		require.NotNil(t, response.GetLastSyncAt())
 		require.NoError(t, response.GetLastSyncAt().CheckValid())
 		require.False(t, response.GetLastSyncAt().AsTime().IsZero())
+		require.NotNil(t, response.GetNextSyncAt())
+		require.NoError(t, response.GetNextSyncAt().CheckValid())
+		require.False(t, response.GetNextSyncAt().AsTime().IsZero())
 	})
 }
 
