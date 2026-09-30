@@ -18,6 +18,6 @@ func TestProvider_Definition(t *testing.T) {
 	definition := provider.Definition()
 
 	assert.Equal(t, "HashiCorp Vault", definition.Name)
-	assert.Empty(t, definition.Links.Doc)
+	assert.Equal(t, "https://developer.hashicorp.com/vault/docs", definition.Links.Doc)
 	assert.Equal(t, "https://vault.example.com", definition.Links.Manager)
 }

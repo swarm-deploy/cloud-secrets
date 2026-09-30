@@ -36,6 +36,7 @@ func (p *Provider) Definition() contracts.ProviderDefinition {
 	return contracts.ProviderDefinition{
 		Name: "HashiCorp Vault",
 		Links: contracts.Links{
+			Doc:     "https://developer.hashicorp.com/vault/docs",
 			Manager: p.cfg.Addr.String(),
 		},
 	}
