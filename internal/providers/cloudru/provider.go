@@ -52,6 +52,10 @@ func NewProvider(ctx context.Context, cfg Config) (*Provider, error) {
 func (p *Provider) Definition() contracts.ProviderDefinition {
 	return contracts.ProviderDefinition{
 		Name: "Cloud.ru Secret Manager",
+		Links: contracts.Links{
+			Doc:     "https://cloud.ru/docs/scsm/ug/index",
+			Manager: "https://console.cloud.ru/spa/secret-manager/list?projectId=" + url.QueryEscape(p.cfg.ProjectID),
+		},
 	}
 }
 

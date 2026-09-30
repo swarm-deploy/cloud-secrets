@@ -1,0 +1,40 @@
+syntax = "proto3";
+
+package swarm_deploy.cloud_secrets;
+
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/swarm-deploy/cloud-secrets/pkg/grpc-api;grpcapi";
+
+service Controller {
+  rpc GetInfo(GetInfoRequest) returns (GetInfoResponse);
+  rpc Sync(SyncRequest) returns (SyncResponse);
+}
+
+message GetInfoRequest {}
+
+message GetInfoResponse {
+  string version = 1;
+  Provider provider = 2;
+  google.protobuf.Timestamp last_sync_at = 3;
+  google.protobuf.Timestamp next_sync_at = 4;
+}
+
+message Provider {
+  string name = 1;
+  Links links = 2;
+}
+
+message Links {
+  string doc = 1;
+  string manager = 2;
+}
+
+message SyncRequest {}
+
+message SyncResponse {
+  uint32 created = 1;
+  uint32 updated = 2;
+  uint32 removed = 3;
+  uint32 unchanged = 4;
+}

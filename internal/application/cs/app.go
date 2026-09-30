@@ -2,6 +2,7 @@ package cs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -34,7 +35,12 @@ type Application struct {
 	synchronizer *sync.Synchronizer
 
 	synchronizing atomic.Bool
+	lastSyncAt    atomic.Pointer[time.Time]
+	nextSyncAt    atomic.Pointer[time.Time]
 }
+
+// ErrSyncInProgress is returned when another synchronization is already running.
+var ErrSyncInProgress = errors.New("synchronization is already in progress")
 
 func NewApplication(ctx context.Context, cfg config.Config, metricsGroup *metrics.Group) (*Application, error) {
 	app := &Application{
@@ -75,36 +81,17 @@ func (app *Application) Run(ctx context.Context) error {
 	slog.InfoContext(ctx, "setup ticker", slog.String("interval", app.cfg.CloudSecrets.RefreshInterval.String()))
 
 	app.ticker = time.NewTicker(app.cfg.CloudSecrets.RefreshInterval)
+	app.setNextSyncAt(time.Now().Add(app.cfg.CloudSecrets.RefreshInterval))
 
 	sighupChannel := make(chan os.Signal, sighupBuf)
 
 	signal.Notify(sighupChannel, syscall.SIGHUP)
 
 	runSync := func(channel string) {
-		if !app.synchronizing.CompareAndSwap(false, true) {
-			slog.InfoContext(ctx, fmt.Sprintf("skip sync by %s", channel))
-			return
+		_, err := app.Sync(ctx, channel)
+		if errors.Is(err, ErrSyncInProgress) {
+			slog.InfoContext(ctx, "skip sync because another synchronization is running", slog.String("trigger", channel))
 		}
-
-		defer app.synchronizing.Swap(false)
-
-		slog.DebugContext(ctx, "run sync")
-
-		app.metrics.Syncs.RecordRun(channel)
-
-		result, err := app.synchronizer.Sync(ctx)
-		app.metrics.Syncs.SetLastSyncAt(time.Now())
-		if err != nil {
-			slog.ErrorContext(ctx, "failed to sync secrets", slog.Any("err", err))
-		}
-
-		slog.Info("sync finished",
-			slog.Int("secrets_created", result.Created),
-			slog.Int("secrets_removed", result.RemovedSecrets),
-			slog.Int("secret_versions_removed", result.RemovedSecretVersions),
-			slog.Int("secrets_updated", result.Updated),
-			slog.Int("secrets_skipped", result.Skipped),
-		)
 	}
 
 	for {
@@ -118,9 +105,86 @@ func (app *Application) Run(ctx context.Context) error {
 
 			runSync("sighup")
 		case <-app.ticker.C:
+			app.advanceNextSyncAt(time.Now())
 			runSync("interval")
 		}
 	}
+}
+
+// Sync runs the normal synchronization flow for the given trigger.
+func (app *Application) Sync(ctx context.Context, trigger string) (sync.Result, error) {
+	if !app.synchronizing.CompareAndSwap(false, true) {
+		return sync.Result{}, ErrSyncInProgress
+	}
+	defer app.synchronizing.Store(false)
+
+	slog.DebugContext(ctx, "run sync", slog.String("trigger", trigger))
+	app.metrics.Syncs.RecordRun(trigger)
+
+	result, err := app.synchronizer.Sync(ctx)
+	completedAt := time.Now()
+	app.metrics.Syncs.SetLastSyncAt(completedAt)
+	app.advanceNextSyncAt(completedAt)
+	if err != nil {
+		slog.ErrorContext(ctx, "failed to sync secrets", slog.String("trigger", trigger), slog.Any("err", err))
+		return result, err
+	}
+
+	app.lastSyncAt.Store(&completedAt)
+
+	slog.InfoContext(ctx, "sync finished",
+		slog.String("trigger", trigger),
+		slog.Int("secrets_created", result.Created),
+		slog.Int("secrets_removed", result.RemovedSecrets),
+		slog.Int("secret_versions_removed", result.RemovedSecretVersions),
+		slog.Int("secrets_updated", result.Updated),
+		slog.Int("secrets_skipped", result.Skipped),
+	)
+
+	return result, nil
+}
+
+// LastSyncAt returns the last successful synchronization time known by this process.
+func (app *Application) LastSyncAt() (time.Time, bool) {
+	lastSyncAt := app.lastSyncAt.Load()
+	if lastSyncAt == nil {
+		return time.Time{}, false
+	}
+
+	return *lastSyncAt, true
+}
+
+// NextSyncAt returns the next scheduled interval synchronization time.
+func (app *Application) NextSyncAt() (time.Time, bool) {
+	return app.advanceNextSyncAt(time.Now())
+}
+
+func (app *Application) setNextSyncAt(nextSyncAt time.Time) {
+	app.nextSyncAt.Store(&nextSyncAt)
+}
+
+func (app *Application) advanceNextSyncAt(now time.Time) (time.Time, bool) {
+	for {
+		nextSyncAt := app.nextSyncAt.Load()
+		if nextSyncAt == nil {
+			return time.Time{}, false
+		}
+		if nextSyncAt.After(now) {
+			return *nextSyncAt, true
+		}
+
+		missedIntervals := int64(now.Sub(*nextSyncAt)/app.cfg.CloudSecrets.RefreshInterval) + 1
+		advanceBy := time.Duration(missedIntervals * int64(app.cfg.CloudSecrets.RefreshInterval))
+		advanced := nextSyncAt.Add(advanceBy)
+		if app.nextSyncAt.CompareAndSwap(nextSyncAt, &advanced) {
+			return advanced, true
+		}
+	}
+}
+
+// ProviderDefinition returns human-readable metadata for the configured provider.
+func (app *Application) ProviderDefinition() contracts.ProviderDefinition {
+	return app.secretProvider.Definition()
 }
 
 func (app *Application) Close() error {
