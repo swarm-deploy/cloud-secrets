@@ -94,6 +94,7 @@ func testVault(t *testing.T, setupAuth vaultAuthSetup) {
 		)
 		require.NoError(t, err)
 		require.Equal(t, "HashiCorp Vault", response.GetProvider().GetName())
+		require.Equal(t, "http://vault:8200", response.GetProvider().GetLinks().GetManager())
 		require.NotNil(t, response.GetLastSyncAt())
 		require.NoError(t, response.GetLastSyncAt().CheckValid())
 		require.False(t, response.GetLastSyncAt().AsTime().IsZero())

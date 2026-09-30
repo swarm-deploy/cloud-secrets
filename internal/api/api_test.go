@@ -23,21 +23,24 @@ func TestService_GetInfo(t *testing.T) {
 	lastSyncAt := time.Date(2026, time.September, 29, 21, 0, 0, 0, time.UTC)
 	nextSyncAt := lastSyncAt.Add(5 * time.Minute)
 	tests := []struct {
-		name        string
-		lastSyncAt  time.Time
-		hasSync     bool
-		nextSyncAt  time.Time
-		hasNext     bool
-		providerURL string
+		name          string
+		lastSyncAt    time.Time
+		hasSync       bool
+		nextSyncAt    time.Time
+		hasNext       bool
+		providerLinks contracts.Links
 	}{
 		{name: "without successful sync"},
 		{
-			name:        "with successful sync and schedule",
-			lastSyncAt:  lastSyncAt,
-			hasSync:     true,
-			nextSyncAt:  nextSyncAt,
-			hasNext:     true,
-			providerURL: "https://vault.example.com",
+			name:       "with successful sync and schedule",
+			lastSyncAt: lastSyncAt,
+			hasSync:    true,
+			nextSyncAt: nextSyncAt,
+			hasNext:    true,
+			providerLinks: contracts.Links{
+				Doc:     "https://developer.hashicorp.com/vault/docs",
+				Manager: "https://vault.example.com",
+			},
 		},
 	}
 
@@ -51,17 +54,18 @@ func TestService_GetInfo(t *testing.T) {
 			syncer.EXPECT().NextSyncAt().Return(tt.nextSyncAt, tt.hasNext)
 
 			service := NewService("v1.2.3", contracts.ProviderDefinition{
-				Name: "HashiCorp Vault",
-				URL:  tt.providerURL,
+				Name:  "HashiCorp Vault",
+				Links: tt.providerLinks,
 			}, syncer)
 
 			response, err := service.GetInfo(context.Background(), &grpcapi.GetInfoRequest{})
 			require.NoError(t, err)
 			assert.Equal(t, "v1.2.3", response.GetVersion())
 			assert.Equal(t, "HashiCorp Vault", response.GetProvider().GetName())
-			if tt.providerURL != "" {
+			if tt.providerLinks != (contracts.Links{}) {
 				require.NotNil(t, response.GetProvider().GetLinks())
-				assert.Equal(t, tt.providerURL, response.GetProvider().GetLinks().GetDoc())
+				assert.Equal(t, tt.providerLinks.Doc, response.GetProvider().GetLinks().GetDoc())
+				assert.Equal(t, tt.providerLinks.Manager, response.GetProvider().GetLinks().GetManager())
 			} else {
 				assert.Nil(t, response.GetProvider().GetLinks())
 			}

@@ -28,7 +28,7 @@ service Controller {
 }
 ```
 
-`GetInfo` returns the running version, configured provider name and documentation link (`provider.links.doc`) when available, the timestamp of the last successful synchronization known by the current process, and the next scheduled interval synchronization time. `last_sync_at` is absent after process start until the first successful synchronization and is not persisted across restarts. `next_sync_at` follows the interval timer; manual gRPC and SIGHUP synchronizations do not reset it.
+`GetInfo` returns the running version, configured provider name, documentation (`provider.links.doc`) and management UI (`provider.links.manager`) links when available, the timestamp of the last successful synchronization known by the current process, and the next scheduled interval synchronization time. `last_sync_at` is absent after process start until the first successful synchronization and is not persisted across restarts. `next_sync_at` follows the interval timer; manual gRPC and SIGHUP synchronizations do not reset it.
 
 `Sync` invokes the same synchronization path used by interval and SIGHUP triggers. If another synchronization is already running, the RPC returns gRPC status `ABORTED`.
 

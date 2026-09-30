@@ -181,6 +181,7 @@ func (x *Provider) GetLinks() *Links {
 type Links struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Doc           string                 `protobuf:"bytes,1,opt,name=doc,proto3" json:"doc,omitempty"`
+	Manager       string                 `protobuf:"bytes,2,opt,name=manager,proto3" json:"manager,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -218,6 +219,13 @@ func (*Links) Descriptor() ([]byte, []int) {
 func (x *Links) GetDoc() string {
 	if x != nil {
 		return x.Doc
+	}
+	return ""
+}
+
+func (x *Links) GetManager() string {
+	if x != nil {
+		return x.Manager
 	}
 	return ""
 }
@@ -341,9 +349,10 @@ const file_swarm_deploy_cloud_secrets_controller_proto_rawDesc = "" +
 	"nextSyncAt\"W\n" +
 	"\bProvider\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x127\n" +
-	"\x05links\x18\x02 \x01(\v2!.swarm_deploy.cloud_secrets.LinksR\x05links\"\x19\n" +
+	"\x05links\x18\x02 \x01(\v2!.swarm_deploy.cloud_secrets.LinksR\x05links\"3\n" +
 	"\x05Links\x12\x10\n" +
-	"\x03doc\x18\x01 \x01(\tR\x03doc\"\r\n" +
+	"\x03doc\x18\x01 \x01(\tR\x03doc\x12\x18\n" +
+	"\amanager\x18\x02 \x01(\tR\amanager\"\r\n" +
 	"\vSyncRequest\"z\n" +
 	"\fSyncResponse\x12\x18\n" +
 	"\acreated\x18\x01 \x01(\rR\acreated\x12\x18\n" +

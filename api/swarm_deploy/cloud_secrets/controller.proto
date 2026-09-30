@@ -27,6 +27,7 @@ message Provider {
 
 message Links {
   string doc = 1;
+  string manager = 2;
 }
 
 message SyncRequest {}

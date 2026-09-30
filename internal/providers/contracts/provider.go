@@ -22,6 +22,15 @@ type Secret struct {
 }
 
 type ProviderDefinition struct {
+	// Name is the human-readable provider name.
 	Name string
-	URL  string
+	// Links contains provider navigation links.
+	Links Links
+}
+
+type Links struct {
+	// Doc points to provider documentation.
+	Doc string
+	// Manager points to the configured provider management UI.
+	Manager string
 }
