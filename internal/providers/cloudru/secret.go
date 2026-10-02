@@ -64,9 +64,10 @@ func (p *Provider) mapSecret(secret *v2.Secret) (contracts.Secret, error) {
 	}
 
 	return contracts.Secret{
-		Path:      scopedPath,
-		FullPath:  secret.Path,
-		VersionID: *versionID,
+		Path:        scopedPath,
+		FullPath:    secret.Path,
+		VersionID:   *versionID,
+		Description: secret.GetDescription(),
 	}, nil
 }
 
