@@ -19,6 +19,8 @@ type Secret struct {
 	Path string
 	// FullPath is the full secret path in external storage.
 	FullPath string
+	// Description is the external secret description.
+	Description string
 }
 
 type ProviderDefinition struct {

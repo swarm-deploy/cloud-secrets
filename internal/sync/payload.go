@@ -31,6 +31,7 @@ type ServiceTask struct {
 type UpdatedSecret struct {
 	Path         string
 	Value        []byte
+	Description  string
 	ExternalPath string
 
 	ExternalID string
