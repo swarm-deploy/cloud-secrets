@@ -30,15 +30,17 @@ type Client interface {
 }
 
 type CreatingSecret struct {
-	Path  string
-	Value []byte
+	Path        string
+	Value       []byte
+	Description string
 
 	ExternalPath      string
 	ExternalVersionID string
 }
 
 type CreatingSecretVersion struct {
-	Path string
+	Path        string
+	Description string
 
 	ExternalID string
 
