@@ -24,6 +24,7 @@ func (s *Synchronizer) restoreSecrets(
 		err := s.engine.CreateSecret(ctx, engine.CreatingSecret{
 			Path:              secret.Path,
 			Value:             secret.Value,
+			Description:       secret.Description,
 			ExternalPath:      secret.ExternalPath,
 			ExternalVersionID: secret.ExternalID,
 		})
