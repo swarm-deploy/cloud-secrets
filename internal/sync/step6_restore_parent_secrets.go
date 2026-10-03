@@ -22,6 +22,7 @@ func (s *Synchronizer) restoreSecrets(
 		slog.DebugContext(ctx, "[synchronizer] restore parent secret", slog.String("secret.path", secret.Path))
 
 		err := s.engine.CreateSecret(ctx, engine.CreatingSecret{
+			Labels:            secret.Labels,
 			Path:              secret.Path,
 			Value:             secret.Value,
 			Description:       secret.Description,

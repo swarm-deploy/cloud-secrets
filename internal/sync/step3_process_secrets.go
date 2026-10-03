@@ -75,6 +75,7 @@ func (s *Synchronizer) createMissingSecret(
 	}
 
 	err = s.engine.CreateSecret(ctx, engine.CreatingSecret{
+		Labels:            externalSecret.Labels,
 		Path:              fixedSecretPath,
 		Value:             payload,
 		Description:       externalSecret.Description,
@@ -121,6 +122,7 @@ func (s *Synchronizer) createUpdatedSecretVersion(
 		createdVersion,
 	)
 	payload.pendingSecretRestores = append(payload.pendingSecretRestores, UpdatedSecret{
+		Labels:       externalSecret.Labels,
 		Path:         swarmSecret.Path,
 		Value:        secretPayload.Value,
 		Description:  externalSecret.Description,
@@ -144,6 +146,7 @@ func (s *Synchronizer) getUpdatedSecretPayload(
 	}
 
 	return engine.CreatingSecretVersion{
+		Labels:      externalSecret.Labels,
 		Path:        secretname.Generate(externalSecret.Path, s.folderDelimiter, externalSecret.VersionID),
 		Description: externalSecret.Description,
 		ExternalID:  externalSecret.VersionID,

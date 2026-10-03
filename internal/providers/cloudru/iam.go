@@ -13,7 +13,7 @@ import (
 )
 
 type iamInterceptor struct {
-	iamClient iamAuthV1.AuthServiceClient
+	iamClient iamTokenClient
 
 	mu                   sync.Mutex
 	accessToken          string
@@ -52,6 +52,7 @@ func (i *iamInterceptor) enrich(ctx context.Context) (context.Context, error) {
 		return ctx, fmt.Errorf("fetch IAM access token: %w", err)
 	}
 
+	md = md.Copy()
 	md.Set("authorization", "Bearer "+token)
 	return metadata.NewOutgoingContext(ctx, md), nil
 }

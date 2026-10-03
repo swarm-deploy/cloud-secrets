@@ -1,6 +1,7 @@
 package cloudru
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -12,7 +13,15 @@ import (
 )
 
 func (p *Provider) GetSecretPayload(ctx context.Context, key string) ([]byte, error) {
-	resp, err := p.secretManager.V2.SecretService.Access(ctx, &v2.AccessSecretRequest{
+	if p.cfg.CertificateManager.Enabled {
+		p.certificateMu.RLock()
+		value, ok := p.certificatePayloads[key]
+		p.certificateMu.RUnlock()
+		if ok {
+			return bytes.Clone(value), nil
+		}
+	}
+	resp, err := p.secretManager.Access(ctx, &v2.AccessSecretRequest{
 		Path:      p.resolveSecretPath(key),
 		ProjectId: p.cfg.ProjectID,
 	})
@@ -33,7 +42,7 @@ func (p *Provider) ListSecrets(ctx context.Context) (map[string]contracts.Secret
 		req.Path = rootFolder
 	}
 
-	secretsResp, err := p.secretManager.V2.SecretService.Search(ctx, req)
+	secretsResp, err := p.secretManager.Search(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -49,6 +58,11 @@ func (p *Provider) ListSecrets(ctx context.Context) (map[string]contracts.Secret
 		secretsMap[secret.Path] = mapped
 	}
 
+	if p.cfg.CertificateManager.Enabled {
+		if err = p.addCertificates(ctx, secretsMap); err != nil {
+			return nil, err
+		}
+	}
 	return secretsMap, nil
 }
 
@@ -68,6 +82,7 @@ func (p *Provider) mapSecret(secret *v2.Secret) (contracts.Secret, error) {
 		FullPath:    secret.Path,
 		VersionID:   *versionID,
 		Description: secret.GetDescription(),
+		Labels:      map[string]string{"type": "secret"},
 	}, nil
 }
 

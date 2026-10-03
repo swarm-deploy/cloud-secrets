@@ -8,7 +8,7 @@ type Provider interface {
 	Definition() ProviderDefinition
 	// GetSecretPayload retrieves latest secret payload by provider path returned from ListSecrets.
 	GetSecretPayload(ctx context.Context, path string) ([]byte, error)
-	// ListSecrets lists secret metadata without loading payload.
+	// ListSecrets lists secret metadata, validating grouped payloads when required by the provider.
 	ListSecrets(ctx context.Context) (map[string]Secret, error)
 }
 
@@ -21,6 +21,8 @@ type Secret struct {
 	FullPath string
 	// Description is the external secret description.
 	Description string
+	// Labels contains provider metadata to attach to the Docker secret.
+	Labels map[string]string
 }
 
 type ProviderDefinition struct {

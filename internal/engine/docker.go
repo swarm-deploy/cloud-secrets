@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
 	"github.com/containerd/errdefs"
@@ -59,13 +60,13 @@ func (c *DockerClient) CreateSecretVersion(
 		Spec: swarm.SecretSpec{
 			Annotations: swarm.Annotations{
 				Name: version.Path,
-				Labels: map[string]string{
+				Labels: secretLabels(version.Labels, map[string]string{
 					"logical_path":        secret.Path,
 					"external_path":       secret.ExternalPath,
 					"external_version_id": version.ExternalID,
 					"description":         version.Description,
 					managedLabel:          "true",
-				},
+				}),
 			},
 			Data: version.Value,
 		},
@@ -90,13 +91,13 @@ func (c *DockerClient) CreateSecret(ctx context.Context, spec CreatingSecret) er
 		Spec: swarm.SecretSpec{
 			Annotations: swarm.Annotations{
 				Name: spec.Path,
-				Labels: map[string]string{
+				Labels: secretLabels(spec.Labels, map[string]string{
 					"logical_path":        spec.Path,
 					"external_path":       spec.ExternalPath,
 					"external_version_id": spec.ExternalVersionID,
 					"description":         spec.Description,
 					managedLabel:          "true",
-				},
+				}),
 			},
 			Data: spec.Value,
 		},
@@ -221,4 +222,18 @@ func (v *ExistingSecret) LatestVersion() ExistingSecretVersion {
 	}
 
 	return v.latestVersion
+}
+
+// secretLabels copies provider metadata before applying authoritative internal labels.
+func secretLabels(provider, internal map[string]string) map[string]string {
+	labels := make(map[string]string, len(provider)+len(internal))
+	for key, value := range provider {
+		if !strings.HasPrefix(key, "cloud-secrets.") {
+			labels[key] = value
+		}
+	}
+	for key, value := range internal {
+		labels[key] = value
+	}
+	return labels
 }

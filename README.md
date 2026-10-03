@@ -5,7 +5,7 @@
 It automatically detects secret changes, updates Docker Swarm secrets, and rolls out the affected services - without requiring changes to stack YAML files.
 
 Supported cloud providers:
-- [Cloud.ru Secret Manager](./docs/usage_cloudru.md)
+- [Cloud.ru (Secret Manager & Certificate Manager)](./docs/usage_cloudru.md)
 - [HashiCorp Vault (KV v2)](./docs/usage_vault.md)
 
 ## How it works

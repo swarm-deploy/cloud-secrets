@@ -30,20 +30,30 @@ type Client interface {
 }
 
 type CreatingSecret struct {
-	Path        string
-	Value       []byte
+	// Labels contains provider metadata; internal reconciliation labels take precedence.
+	Labels map[string]string
+	// Path is the logical Docker secret name.
+	Path string
+	// Value is the secret payload.
+	Value []byte
+	// Description is the external secret description.
 	Description string
-
-	ExternalPath      string
+	// ExternalPath identifies the secret in its provider.
+	ExternalPath string
+	// ExternalVersionID identifies the synchronized provider version.
 	ExternalVersionID string
 }
 
 type CreatingSecretVersion struct {
-	Path        string
+	// Labels contains provider metadata; internal reconciliation labels take precedence.
+	Labels map[string]string
+	// Path is the temporary versioned Docker secret name.
+	Path string
+	// Description is the external secret description.
 	Description string
-
+	// ExternalID identifies the synchronized provider version.
 	ExternalID string
-
+	// Value is the secret payload.
 	Value []byte
 }
 

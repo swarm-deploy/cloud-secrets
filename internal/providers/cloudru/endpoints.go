@@ -19,7 +19,9 @@ type EndpointsResponse struct {
 
 // Endpoint is a product API address.
 type Endpoint struct {
-	ID      string `json:"id"`
+	// ID identifies the Cloud.ru product.
+	ID string `json:"id"`
+	// Address is the product API endpoint.
 	Address string `json:"address"`
 }
 
@@ -32,13 +34,13 @@ func getEndpoints(ctx context.Context, url string) (*EndpointsResponse, error) {
 
 	slog.InfoContext(ctx, "get endpoints from cloud.ru", slog.String("discovery_url", url))
 
-	resp, err := http.DefaultClient.Do(req) //nolint:gosec // Destination URL is controlled by configuration.
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("get cloud.ru endpoints: %w", err)
 	}
 	defer func() {
-		if cerr := resp.Body.Close(); err != nil {
-			slog.Error("failed to close response body", slog.Any("err", cerr))
+		if cerr := resp.Body.Close(); cerr != nil {
+			slog.ErrorContext(ctx, "failed to close response body", slog.Any("err", cerr))
 		}
 	}()
 

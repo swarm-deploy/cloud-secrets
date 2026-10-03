@@ -29,11 +29,17 @@ type ServiceTask struct {
 }
 
 type UpdatedSecret struct {
-	Path         string
-	Value        []byte
-	Description  string
+	// Labels contains provider metadata to preserve when restoring the parent secret.
+	Labels map[string]string
+	// Path is the logical Docker secret name to restore.
+	Path string
+	// Value is the validated payload of the new version.
+	Value []byte
+	// Description is the external secret description.
+	Description string
+	// ExternalPath identifies the secret in its provider.
 	ExternalPath string
-
+	// ExternalID identifies the synchronized provider version.
 	ExternalID string
 }
 
