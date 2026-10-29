@@ -67,6 +67,8 @@ Providers implement the contract defined in `internal/providers/contracts/provid
 type Provider interface {
 	// Definition returns human-readable provider definition.
 	Definition() ProviderDefinition
+	// CreateSecret creates a new secret in the configured synchronization scope.
+	CreateSecret(ctx context.Context, req CreateSecretRequest) (string, error)
 	// GetSecretPayload retrieves latest secret payload by provider path returned from ListSecrets.
 	GetSecretPayload(ctx context.Context, path string) ([]byte, error)
 	// ListSecrets lists secret metadata without loading payload.

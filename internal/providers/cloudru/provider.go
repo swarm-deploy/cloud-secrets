@@ -10,6 +10,7 @@ import (
 	"time"
 
 	iamAuthV1 "github.com/cloudru-tech/iam-sdk/api/auth/v1"
+	v2 "github.com/cloudru-tech/secret-manager-sdk/api/v2"
 	"github.com/swarm-deploy/cloud-secrets/internal/grpcx"
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
 	"google.golang.org/grpc/credentials"
@@ -19,10 +20,21 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
+//go:generate mockgen -source=$GOFILE -destination=mocks_test.go -package=cloudru
+
+type secretServiceClient interface {
+	// Create creates a Cloud.ru Secret Manager secret.
+	Create(context.Context, *v2.CreateSecretRequest, ...grpc.CallOption) (*v2.CreateSecretResponse, error)
+	// Search lists Cloud.ru Secret Manager secrets.
+	Search(context.Context, *v2.SearchSecretRequest, ...grpc.CallOption) (*v2.SearchSecretResponse, error)
+	// Access reads a Cloud.ru Secret Manager secret payload.
+	Access(context.Context, *v2.AccessSecretRequest, ...grpc.CallOption) (*v2.AccessSecretResponse, error)
+}
+
 type Provider struct {
 	cfg Config
 
-	secretManager *smssdk.Client
+	secretService secretServiceClient
 }
 
 func NewProvider(ctx context.Context, cfg Config) (*Provider, error) {
@@ -136,7 +148,7 @@ func (p *Provider) initSecretManagerClient() error {
 		return err
 	}
 
-	p.secretManager = smsClient
+	p.secretService = smsClient.V2.SecretService
 
 	return nil
 }

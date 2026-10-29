@@ -113,6 +113,20 @@ func (mr *MockClientMockRecorder) CreateSecret(ctx, path, data any) *gomock.Call
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSecret", reflect.TypeOf((*MockClient)(nil).CreateSecret), ctx, path, data)
 }
 
+// CreateSecretKey mocks base method.
+func (m *MockClient) CreateSecretKey(ctx context.Context, path, key string, value []byte) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateSecretKey", ctx, path, key, value)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CreateSecretKey indicates an expected call of CreateSecretKey.
+func (mr *MockClientMockRecorder) CreateSecretKey(ctx, path, key, value any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSecretKey", reflect.TypeOf((*MockClient)(nil).CreateSecretKey), ctx, path, key, value)
+}
+
 // CreateToken mocks base method.
 func (m *MockClient) CreateToken(ctx context.Context, policies []string) (string, error) {
 	m.ctrl.T.Helper()

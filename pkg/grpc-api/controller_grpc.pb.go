@@ -157,3 +157,105 @@ var Controller_ServiceDesc = grpc.ServiceDesc{
 	Streams:  []grpc.StreamDesc{},
 	Metadata: "swarm_deploy/cloud_secrets/controller.proto",
 }
+
+const (
+	Secrets_Create_FullMethodName = "/swarm_deploy.cloud_secrets.Secrets/Create"
+)
+
+// SecretsClient is the client API for Secrets service.
+//
+// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+type SecretsClient interface {
+	Create(ctx context.Context, in *CreateSecretRequest, opts ...grpc.CallOption) (*CreateSecretResponse, error)
+}
+
+type secretsClient struct {
+	cc grpc.ClientConnInterface
+}
+
+func NewSecretsClient(cc grpc.ClientConnInterface) SecretsClient {
+	return &secretsClient{cc}
+}
+
+func (c *secretsClient) Create(ctx context.Context, in *CreateSecretRequest, opts ...grpc.CallOption) (*CreateSecretResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CreateSecretResponse)
+	err := c.cc.Invoke(ctx, Secrets_Create_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// SecretsServer is the server API for Secrets service.
+// All implementations must embed UnimplementedSecretsServer
+// for forward compatibility.
+type SecretsServer interface {
+	Create(context.Context, *CreateSecretRequest) (*CreateSecretResponse, error)
+	mustEmbedUnimplementedSecretsServer()
+}
+
+// UnimplementedSecretsServer must be embedded to have
+// forward compatible implementations.
+//
+// NOTE: this should be embedded by value instead of pointer to avoid a nil
+// pointer dereference when methods are called.
+type UnimplementedSecretsServer struct{}
+
+func (UnimplementedSecretsServer) Create(context.Context, *CreateSecretRequest) (*CreateSecretResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Create not implemented")
+}
+func (UnimplementedSecretsServer) mustEmbedUnimplementedSecretsServer() {}
+func (UnimplementedSecretsServer) testEmbeddedByValue()                 {}
+
+// UnsafeSecretsServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to SecretsServer will
+// result in compilation errors.
+type UnsafeSecretsServer interface {
+	mustEmbedUnimplementedSecretsServer()
+}
+
+func RegisterSecretsServer(s grpc.ServiceRegistrar, srv SecretsServer) {
+	// If the following call pancis, it indicates UnimplementedSecretsServer was
+	// embedded by pointer and is nil.  This will cause panics if an
+	// unimplemented method is ever invoked, so we test this at initialization
+	// time to prevent it from happening at runtime later due to I/O.
+	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
+		t.testEmbeddedByValue()
+	}
+	s.RegisterService(&Secrets_ServiceDesc, srv)
+}
+
+func _Secrets_Create_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CreateSecretRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SecretsServer).Create(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Secrets_Create_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SecretsServer).Create(ctx, req.(*CreateSecretRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+// Secrets_ServiceDesc is the grpc.ServiceDesc for Secrets service.
+// It's only intended for direct use with grpc.RegisterService,
+// and not to be introspected or modified (even as a copy)
+var Secrets_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "swarm_deploy.cloud_secrets.Secrets",
+	HandlerType: (*SecretsServer)(nil),
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "Create",
+			Handler:    _Secrets_Create_Handler,
+		},
+	},
+	Streams:  []grpc.StreamDesc{},
+	Metadata: "swarm_deploy/cloud_secrets/controller.proto",
+}

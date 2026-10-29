@@ -26,6 +26,7 @@ func New(address string, controllerService *api.Service) *Server {
 	healthServer := health.NewServer()
 
 	grpcapi.RegisterControllerServer(grpcServer, controllerService)
+	grpcapi.RegisterSecretsServer(grpcServer, controllerService)
 	grpc_health_v1.RegisterHealthServer(grpcServer, healthServer)
 
 	return &Server{
@@ -49,6 +50,10 @@ func (s *Server) serve(listener net.Listener) error {
 	s.healthServer.SetServingStatus("", grpc_health_v1.HealthCheckResponse_SERVING)
 	s.healthServer.SetServingStatus(
 		grpcapi.Controller_ServiceDesc.ServiceName,
+		grpc_health_v1.HealthCheckResponse_SERVING,
+	)
+	s.healthServer.SetServingStatus(
+		grpcapi.Secrets_ServiceDesc.ServiceName,
 		grpc_health_v1.HealthCheckResponse_SERVING,
 	)
 

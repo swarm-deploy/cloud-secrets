@@ -334,6 +334,118 @@ func (x *SyncResponse) GetUnchanged() uint32 {
 	return 0
 }
 
+type CreateSecretRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	Value         []byte                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	Key           string                 `protobuf:"bytes,3,opt,name=key,proto3" json:"key,omitempty"`
+	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateSecretRequest) Reset() {
+	*x = CreateSecretRequest{}
+	mi := &file_swarm_deploy_cloud_secrets_controller_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateSecretRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateSecretRequest) ProtoMessage() {}
+
+func (x *CreateSecretRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_swarm_deploy_cloud_secrets_controller_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateSecretRequest.ProtoReflect.Descriptor instead.
+func (*CreateSecretRequest) Descriptor() ([]byte, []int) {
+	return file_swarm_deploy_cloud_secrets_controller_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *CreateSecretRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *CreateSecretRequest) GetValue() []byte {
+	if x != nil {
+		return x.Value
+	}
+	return nil
+}
+
+func (x *CreateSecretRequest) GetKey() string {
+	if x != nil {
+		return x.Key
+	}
+	return ""
+}
+
+func (x *CreateSecretRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+type CreateSecretResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateSecretResponse) Reset() {
+	*x = CreateSecretResponse{}
+	mi := &file_swarm_deploy_cloud_secrets_controller_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateSecretResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateSecretResponse) ProtoMessage() {}
+
+func (x *CreateSecretResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_swarm_deploy_cloud_secrets_controller_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateSecretResponse.ProtoReflect.Descriptor instead.
+func (*CreateSecretResponse) Descriptor() ([]byte, []int) {
+	return file_swarm_deploy_cloud_secrets_controller_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *CreateSecretResponse) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
 var File_swarm_deploy_cloud_secrets_controller_proto protoreflect.FileDescriptor
 
 const file_swarm_deploy_cloud_secrets_controller_proto_rawDesc = "" +
@@ -358,11 +470,20 @@ const file_swarm_deploy_cloud_secrets_controller_proto_rawDesc = "" +
 	"\acreated\x18\x01 \x01(\rR\acreated\x12\x18\n" +
 	"\aupdated\x18\x02 \x01(\rR\aupdated\x12\x18\n" +
 	"\aremoved\x18\x03 \x01(\rR\aremoved\x12\x1c\n" +
-	"\tunchanged\x18\x04 \x01(\rR\tunchanged2\xcb\x01\n" +
+	"\tunchanged\x18\x04 \x01(\rR\tunchanged\"s\n" +
+	"\x13CreateSecretRequest\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\fR\x05value\x12\x10\n" +
+	"\x03key\x18\x03 \x01(\tR\x03key\x12 \n" +
+	"\vdescription\x18\x04 \x01(\tR\vdescription\"*\n" +
+	"\x14CreateSecretResponse\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path2\xcb\x01\n" +
 	"\n" +
 	"Controller\x12b\n" +
 	"\aGetInfo\x12*.swarm_deploy.cloud_secrets.GetInfoRequest\x1a+.swarm_deploy.cloud_secrets.GetInfoResponse\x12Y\n" +
-	"\x04Sync\x12'.swarm_deploy.cloud_secrets.SyncRequest\x1a(.swarm_deploy.cloud_secrets.SyncResponseB<Z:github.com/swarm-deploy/cloud-secrets/pkg/grpc-api;grpcapib\x06proto3"
+	"\x04Sync\x12'.swarm_deploy.cloud_secrets.SyncRequest\x1a(.swarm_deploy.cloud_secrets.SyncResponse2v\n" +
+	"\aSecrets\x12k\n" +
+	"\x06Create\x12/.swarm_deploy.cloud_secrets.CreateSecretRequest\x1a0.swarm_deploy.cloud_secrets.CreateSecretResponseB<Z:github.com/swarm-deploy/cloud-secrets/pkg/grpc-api;grpcapib\x06proto3"
 
 var (
 	file_swarm_deploy_cloud_secrets_controller_proto_rawDescOnce sync.Once
@@ -376,7 +497,7 @@ func file_swarm_deploy_cloud_secrets_controller_proto_rawDescGZIP() []byte {
 	return file_swarm_deploy_cloud_secrets_controller_proto_rawDescData
 }
 
-var file_swarm_deploy_cloud_secrets_controller_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_swarm_deploy_cloud_secrets_controller_proto_msgTypes = make([]protoimpl.MessageInfo, 8)
 var file_swarm_deploy_cloud_secrets_controller_proto_goTypes = []any{
 	(*GetInfoRequest)(nil),        // 0: swarm_deploy.cloud_secrets.GetInfoRequest
 	(*GetInfoResponse)(nil),       // 1: swarm_deploy.cloud_secrets.GetInfoResponse
@@ -384,19 +505,23 @@ var file_swarm_deploy_cloud_secrets_controller_proto_goTypes = []any{
 	(*Links)(nil),                 // 3: swarm_deploy.cloud_secrets.Links
 	(*SyncRequest)(nil),           // 4: swarm_deploy.cloud_secrets.SyncRequest
 	(*SyncResponse)(nil),          // 5: swarm_deploy.cloud_secrets.SyncResponse
-	(*timestamppb.Timestamp)(nil), // 6: google.protobuf.Timestamp
+	(*CreateSecretRequest)(nil),   // 6: swarm_deploy.cloud_secrets.CreateSecretRequest
+	(*CreateSecretResponse)(nil),  // 7: swarm_deploy.cloud_secrets.CreateSecretResponse
+	(*timestamppb.Timestamp)(nil), // 8: google.protobuf.Timestamp
 }
 var file_swarm_deploy_cloud_secrets_controller_proto_depIdxs = []int32{
 	2, // 0: swarm_deploy.cloud_secrets.GetInfoResponse.provider:type_name -> swarm_deploy.cloud_secrets.Provider
-	6, // 1: swarm_deploy.cloud_secrets.GetInfoResponse.last_sync_at:type_name -> google.protobuf.Timestamp
-	6, // 2: swarm_deploy.cloud_secrets.GetInfoResponse.next_sync_at:type_name -> google.protobuf.Timestamp
+	8, // 1: swarm_deploy.cloud_secrets.GetInfoResponse.last_sync_at:type_name -> google.protobuf.Timestamp
+	8, // 2: swarm_deploy.cloud_secrets.GetInfoResponse.next_sync_at:type_name -> google.protobuf.Timestamp
 	3, // 3: swarm_deploy.cloud_secrets.Provider.links:type_name -> swarm_deploy.cloud_secrets.Links
 	0, // 4: swarm_deploy.cloud_secrets.Controller.GetInfo:input_type -> swarm_deploy.cloud_secrets.GetInfoRequest
 	4, // 5: swarm_deploy.cloud_secrets.Controller.Sync:input_type -> swarm_deploy.cloud_secrets.SyncRequest
-	1, // 6: swarm_deploy.cloud_secrets.Controller.GetInfo:output_type -> swarm_deploy.cloud_secrets.GetInfoResponse
-	5, // 7: swarm_deploy.cloud_secrets.Controller.Sync:output_type -> swarm_deploy.cloud_secrets.SyncResponse
-	6, // [6:8] is the sub-list for method output_type
-	4, // [4:6] is the sub-list for method input_type
+	6, // 6: swarm_deploy.cloud_secrets.Secrets.Create:input_type -> swarm_deploy.cloud_secrets.CreateSecretRequest
+	1, // 7: swarm_deploy.cloud_secrets.Controller.GetInfo:output_type -> swarm_deploy.cloud_secrets.GetInfoResponse
+	5, // 8: swarm_deploy.cloud_secrets.Controller.Sync:output_type -> swarm_deploy.cloud_secrets.SyncResponse
+	7, // 9: swarm_deploy.cloud_secrets.Secrets.Create:output_type -> swarm_deploy.cloud_secrets.CreateSecretResponse
+	7, // [7:10] is the sub-list for method output_type
+	4, // [4:7] is the sub-list for method input_type
 	4, // [4:4] is the sub-list for extension type_name
 	4, // [4:4] is the sub-list for extension extendee
 	0, // [0:4] is the sub-list for field type_name
@@ -413,9 +538,9 @@ func file_swarm_deploy_cloud_secrets_controller_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_swarm_deploy_cloud_secrets_controller_proto_rawDesc), len(file_swarm_deploy_cloud_secrets_controller_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   8,
 			NumExtensions: 0,
-			NumServices:   1,
+			NumServices:   2,
 		},
 		GoTypes:           file_swarm_deploy_cloud_secrets_controller_proto_goTypes,
 		DependencyIndexes: file_swarm_deploy_cloud_secrets_controller_proto_depIdxs,

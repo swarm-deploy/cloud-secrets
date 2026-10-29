@@ -40,6 +40,21 @@ func (m *MockProvider) EXPECT() *MockProviderMockRecorder {
 	return m.recorder
 }
 
+// CreateSecret mocks base method.
+func (m *MockProvider) CreateSecret(ctx context.Context, req CreateSecretRequest) (string, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CreateSecret", ctx, req)
+	ret0, _ := ret[0].(string)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CreateSecret indicates an expected call of CreateSecret.
+func (mr *MockProviderMockRecorder) CreateSecret(ctx, req any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CreateSecret", reflect.TypeOf((*MockProvider)(nil).CreateSecret), ctx, req)
+}
+
 // Definition mocks base method.
 func (m *MockProvider) Definition() ProviderDefinition {
 	m.ctrl.T.Helper()

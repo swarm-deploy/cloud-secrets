@@ -113,7 +113,7 @@ func runCloudSecrets() {
 	if cfg.CloudSecrets.GRPCAddr != "" {
 		grpcServer := grpcserver.New(
 			cfg.CloudSecrets.GRPCAddr,
-			api.NewService(Version, app.ProviderDefinition(), app),
+			api.NewService(Version, app.Provider(), app),
 		)
 		entrypoints = append(entrypoints, entrypoint.Entrypoint{
 			Name: "grpc-server",

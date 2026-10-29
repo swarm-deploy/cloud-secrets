@@ -8,6 +8,7 @@ import (
 )
 
 const (
+	operationCreateSecret     = "create_secret"
 	operationGetSecretPayload = "get_secret_payload"
 	operationListSecrets      = "list_secrets"
 )
@@ -27,6 +28,15 @@ func WithMetrics(provider Provider, metrics metrics.Provider) Provider {
 
 func (d *metricsDecorator) Definition() ProviderDefinition {
 	return d.provider.Definition()
+}
+
+func (d *metricsDecorator) CreateSecret(ctx context.Context, req CreateSecretRequest) (string, error) {
+	startedAt := time.Now()
+	defer func() {
+		d.metrics.RecordRequest(operationCreateSecret, time.Since(startedAt))
+	}()
+
+	return d.provider.CreateSecret(ctx, req)
 }
 
 func (d *metricsDecorator) GetSecretPayload(ctx context.Context, key string) ([]byte, error) {

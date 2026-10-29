@@ -40,6 +40,14 @@ func (d *AuthenticatedClient) CreateSecret(
 	return d.client.CreateSecret(ctx, path, data)
 }
 
+func (d *AuthenticatedClient) CreateSecretKey(ctx context.Context, path, key string, value []byte) error {
+	if err := d.authenticator.Authenticate(ctx); err != nil {
+		return fmt.Errorf("authenticate: %w", err)
+	}
+
+	return d.client.CreateSecretKey(ctx, path, key, value)
+}
+
 func (d *AuthenticatedClient) DeleteSecret(ctx context.Context, path string) error {
 	if err := d.authenticator.Authenticate(ctx); err != nil {
 		return fmt.Errorf("authenticate: %w", err)
