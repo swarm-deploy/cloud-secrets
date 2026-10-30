@@ -182,9 +182,9 @@ func (app *Application) advanceNextSyncAt(now time.Time) (time.Time, bool) {
 	}
 }
 
-// ProviderDefinition returns human-readable metadata for the configured provider.
-func (app *Application) ProviderDefinition() contracts.ProviderDefinition {
-	return app.secretProvider.Definition()
+// Provider returns the configured secret provider.
+func (app *Application) Provider() contracts.Provider {
+	return app.secretProvider
 }
 
 func (app *Application) Close() error {

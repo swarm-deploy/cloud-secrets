@@ -4,15 +4,74 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 
 	v2 "github.com/cloudru-tech/secret-manager-sdk/api/v2"
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
+// CreateSecret creates a Cloud.ru Secret Manager secret in the configured scope.
+func (p *Provider) CreateSecret(ctx context.Context, req contracts.CreateSecretRequest) (contracts.Secret, error) {
+	if req.Key != "" {
+		return contracts.Secret{}, fmt.Errorf("%w: key must be empty for Cloud.ru", contracts.ErrInvalidCreateRequest)
+	}
+
+	logicalPath, fullPath, err := p.createSecretPath(req.Path)
+	if err != nil {
+		return contracts.Secret{}, err
+	}
+
+	_, err = p.secretService.Create(ctx, &v2.CreateSecretRequest{
+		ProjectId:   p.cfg.ProjectID,
+		Path:        fullPath,
+		Description: req.Description,
+		Payload:     wrapperspb.Bytes(req.Value),
+	})
+	if err != nil {
+		code := status.Code(err)
+		if code == codes.AlreadyExists {
+			return contracts.Secret{}, fmt.Errorf("%w: Cloud.ru secret %q", contracts.ErrSecretAlreadyExists, logicalPath)
+		}
+		if code == codes.InvalidArgument {
+			return contracts.Secret{}, fmt.Errorf(
+				"%w: Cloud.ru rejected path %q: %w",
+				contracts.ErrInvalidCreateRequest,
+				logicalPath,
+				err,
+			)
+		}
+
+		return contracts.Secret{}, fmt.Errorf("create Cloud.ru secret %q: %w", logicalPath, err)
+	}
+
+	return contracts.Secret{
+		Path:        logicalPath,
+		FullPath:    fullPath,
+		Description: req.Description,
+		WebURL:      p.secretWebURL(fullPath),
+	}, nil
+}
+
+func (p *Provider) secretWebURL(path string) string {
+	managerURL := url.URL{
+		Scheme: "https",
+		Host:   "console.cloud.ru",
+		Path:   "/spa/secret-manager/show/" + path,
+	}
+	query := managerURL.Query()
+	query.Set("projectId", p.cfg.ProjectID)
+	managerURL.RawQuery = query.Encode()
+
+	return managerURL.String()
+}
+
 func (p *Provider) GetSecretPayload(ctx context.Context, key string) ([]byte, error) {
-	resp, err := p.secretManager.V2.SecretService.Access(ctx, &v2.AccessSecretRequest{
+	resp, err := p.secretService.Access(ctx, &v2.AccessSecretRequest{
 		Path:      p.resolveSecretPath(key),
 		ProjectId: p.cfg.ProjectID,
 	})
@@ -33,7 +92,7 @@ func (p *Provider) ListSecrets(ctx context.Context) (map[string]contracts.Secret
 		req.Path = rootFolder
 	}
 
-	secretsResp, err := p.secretManager.V2.SecretService.Search(ctx, req)
+	secretsResp, err := p.secretService.Search(ctx, req)
 	if err != nil {
 		return nil, err
 	}
@@ -50,6 +109,44 @@ func (p *Provider) ListSecrets(ctx context.Context) (map[string]contracts.Secret
 	}
 
 	return secretsMap, nil
+}
+
+func (p *Provider) createSecretPath(value string) (string, string, error) {
+	normalized := strings.Trim(strings.TrimSpace(value), "/")
+	if normalized == "" {
+		return "", "", fmt.Errorf("%w: path is required", contracts.ErrInvalidCreateRequest)
+	}
+
+	for _, segment := range strings.Split(normalized, "/") {
+		if segment == "" || segment == "." || segment == ".." {
+			return "", "", fmt.Errorf("%w: path contains an invalid segment", contracts.ErrInvalidCreateRequest)
+		}
+	}
+
+	rootFolder := string(p.cfg.RootFolder)
+	if rootFolder == "" {
+		return normalized, normalized, nil
+	}
+
+	if p.cfg.RootFolderOmitPrefix {
+		fullPath := p.resolveSecretPath(normalized)
+		logicalPath, err := p.scopeSecretPath(fullPath)
+		if err != nil {
+			return "", "", fmt.Errorf("%w: %w", contracts.ErrInvalidCreateRequest, err)
+		}
+
+		return logicalPath, fullPath, nil
+	}
+
+	if normalized == rootFolder || !strings.HasPrefix(normalized, rootFolder+"/") {
+		return "", "", fmt.Errorf(
+			"%w: path must be inside root folder %q",
+			contracts.ErrInvalidCreateRequest,
+			rootFolder,
+		)
+	}
+
+	return normalized, normalized, nil
 }
 
 func (p *Provider) mapSecret(secret *v2.Secret) (contracts.Secret, error) {

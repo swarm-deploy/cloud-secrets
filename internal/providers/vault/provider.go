@@ -2,8 +2,10 @@ package vault
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
 	vaultclient "github.com/swarm-deploy/cloud-secrets/internal/providers/vault/api"
@@ -39,6 +41,57 @@ func (p *Provider) Definition() contracts.ProviderDefinition {
 			Doc: "https://developer.hashicorp.com/vault/docs",
 		},
 	}
+}
+
+// CreateSecret creates a new key in a Vault KV v2 document.
+func (p *Provider) CreateSecret(ctx context.Context, req contracts.CreateSecretRequest) (contracts.Secret, error) {
+	path, err := normalizeCreatePath(req.Path)
+	if err != nil {
+		return contracts.Secret{}, err
+	}
+
+	key := strings.TrimSpace(req.Key)
+	if key == "" {
+		return contracts.Secret{}, fmt.Errorf("%w: key is required for Vault KV v2", contracts.ErrInvalidCreateRequest)
+	}
+	if strings.Contains(key, "/") {
+		return contracts.Secret{}, fmt.Errorf("%w: key must not contain /", contracts.ErrInvalidCreateRequest)
+	}
+	if req.Description != "" {
+		return contracts.Secret{}, fmt.Errorf(
+			"%w: description is not supported by Vault KV v2",
+			contracts.ErrInvalidCreateRequest,
+		)
+	}
+	if !utf8.Valid(req.Value) {
+		return contracts.Secret{}, fmt.Errorf(
+			"%w: value must be valid UTF-8 for Vault KV v2",
+			contracts.ErrInvalidCreateRequest,
+		)
+	}
+
+	err = p.client.CreateSecretKey(ctx, path, key, req.Value)
+	if err != nil {
+		switch {
+		case errors.Is(err, vaultclient.ErrSecretKeyExists):
+			return contracts.Secret{}, fmt.Errorf(
+				"%w: Vault document %q already contains key %q",
+				contracts.ErrSecretAlreadyExists,
+				path,
+				key,
+			)
+		case errors.Is(err, vaultclient.ErrCASConflict):
+			return contracts.Secret{}, fmt.Errorf(
+				"%w: Vault document %q changed concurrently",
+				contracts.ErrCreateConflict,
+				path,
+			)
+		default:
+			return contracts.Secret{}, fmt.Errorf("create Vault secret %q key %q: %w", path, key, err)
+		}
+	}
+
+	return contracts.Secret{Path: path}, nil
 }
 
 func (p *Provider) GetSecretPayload(ctx context.Context, path string) ([]byte, error) {
@@ -120,4 +173,19 @@ func joinPath(parent string, child string) string {
 	}
 
 	return parent + "/" + child
+}
+
+func normalizeCreatePath(value string) (string, error) {
+	normalized := strings.Trim(strings.TrimSpace(value), "/")
+	if normalized == "" {
+		return "", fmt.Errorf("%w: path is required", contracts.ErrInvalidCreateRequest)
+	}
+
+	for _, segment := range strings.Split(normalized, "/") {
+		if segment == "" || segment == "." || segment == ".." {
+			return "", fmt.Errorf("%w: path contains an invalid segment", contracts.ErrInvalidCreateRequest)
+		}
+	}
+
+	return normalized, nil
 }

@@ -11,6 +11,10 @@ service Controller {
   rpc Sync(SyncRequest) returns (SyncResponse);
 }
 
+service Secrets {
+  rpc Create(CreateSecretRequest) returns (CreateSecretResponse);
+}
+
 message GetInfoRequest {}
 
 message GetInfoResponse {
@@ -37,4 +41,17 @@ message SyncResponse {
   uint32 updated = 2;
   uint32 removed = 3;
   uint32 unchanged = 4;
+}
+
+message CreateSecretRequest {
+  string path = 1;
+  bytes value = 2;
+  string key = 3;
+  string description = 4;
+}
+
+message CreateSecretResponse {
+  string path = 1;
+
+  optional string manager_url = 2;
 }

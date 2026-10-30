@@ -11,6 +11,7 @@ import (
 	"github.com/swarm-deploy/cloud-secrets/internal/api"
 	"github.com/swarm-deploy/cloud-secrets/internal/providers/contracts"
 	grpcapi "github.com/swarm-deploy/cloud-secrets/pkg/grpc-api"
+	"go.uber.org/mock/gomock"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	grpc_health_v1 "google.golang.org/grpc/health/grpc_health_v1"
@@ -19,10 +20,12 @@ import (
 func TestNew_RegistersServices(t *testing.T) {
 	t.Parallel()
 
-	server := New("127.0.0.1:0", api.NewService("test", contracts.ProviderDefinition{}, nil))
+	provider := contracts.NewMockProvider(gomock.NewController(t))
+	server := New("127.0.0.1:0", api.NewService("test", provider, nil))
 	services := server.grpcServer.GetServiceInfo()
 
 	assert.Contains(t, services, grpcapi.Controller_ServiceDesc.ServiceName)
+	assert.Contains(t, services, grpcapi.Secrets_ServiceDesc.ServiceName)
 	assert.Contains(t, services, grpc_health_v1.Health_ServiceDesc.ServiceName)
 }
 
@@ -35,7 +38,8 @@ func TestServer_Run_ReturnsErrorWhenAddressOccupied(t *testing.T) {
 		require.NoError(t, listener.Close())
 	})
 
-	server := New(listener.Addr().String(), api.NewService("test", contracts.ProviderDefinition{}, nil))
+	provider := contracts.NewMockProvider(gomock.NewController(t))
+	server := New(listener.Addr().String(), api.NewService("test", provider, nil))
 	err = server.Run(context.Background())
 
 	require.Error(t, err)
@@ -48,7 +52,8 @@ func TestServer_Health(t *testing.T) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 
-	server := New(listener.Addr().String(), api.NewService("test", contracts.ProviderDefinition{}, nil))
+	provider := contracts.NewMockProvider(gomock.NewController(t))
+	server := New(listener.Addr().String(), api.NewService("test", provider, nil))
 	serveErrors := make(chan error, 1)
 	go func() {
 		serveErrors <- server.serve(listener)
@@ -64,7 +69,11 @@ func TestServer_Health(t *testing.T) {
 	defer cancel()
 
 	healthClient := grpc_health_v1.NewHealthClient(connection)
-	for _, serviceName := range []string{"", grpcapi.Controller_ServiceDesc.ServiceName} {
+	for _, serviceName := range []string{
+		"",
+		grpcapi.Controller_ServiceDesc.ServiceName,
+		grpcapi.Secrets_ServiceDesc.ServiceName,
+	} {
 		response, checkErr := healthClient.Check(ctx, &grpc_health_v1.HealthCheckRequest{Service: serviceName})
 		require.NoError(t, checkErr)
 		assert.Equal(t, grpc_health_v1.HealthCheckResponse_SERVING, response.GetStatus())

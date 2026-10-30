@@ -1,6 +1,6 @@
 # gRPC API
 
-Generated Go types and gRPC client/server interfaces for the cloud-secrets Controller API.
+Generated Go types and gRPC client/server interfaces for the cloud-secrets Controller and Secrets APIs.
 
 ```go
 import grpcapi "github.com/swarm-deploy/cloud-secrets/pkg/grpc-api"

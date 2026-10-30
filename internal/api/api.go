@@ -4,6 +4,7 @@ package api
 import (
 	"context"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/swarm-deploy/cloud-secrets/internal/application/cs"
@@ -30,14 +31,15 @@ type Syncer interface {
 // Service implements the cloud-secrets integration API.
 type Service struct {
 	grpcapi.UnimplementedControllerServer
+	grpcapi.UnimplementedSecretsServer
 
 	version  string
-	provider contracts.ProviderDefinition
+	provider contracts.Provider
 	syncer   Syncer
 }
 
-// NewService creates a Controller service.
-func NewService(version string, provider contracts.ProviderDefinition, syncer Syncer) *Service {
+// NewService creates Controller and Secrets services.
+func NewService(version string, provider contracts.Provider, syncer Syncer) *Service {
 	return &Service{
 		version:  version,
 		provider: provider,
@@ -47,16 +49,17 @@ func NewService(version string, provider contracts.ProviderDefinition, syncer Sy
 
 // GetInfo returns process and provider metadata.
 func (s *Service) GetInfo(context.Context, *grpcapi.GetInfoRequest) (*grpcapi.GetInfoResponse, error) {
+	definition := s.provider.Definition()
 	response := &grpcapi.GetInfoResponse{
 		Version: s.version,
 		Provider: &grpcapi.Provider{
-			Name: s.provider.Name,
+			Name: definition.Name,
 		},
 	}
-	if s.provider.Links.Doc != "" || s.provider.Links.Manager != "" {
+	if definition.Links.Doc != "" || definition.Links.Manager != "" {
 		response.Provider.Links = &grpcapi.Links{
-			Doc:     s.provider.Links.Doc,
-			Manager: s.provider.Links.Manager,
+			Doc:     definition.Links.Doc,
+			Manager: definition.Links.Manager,
 		}
 	}
 
@@ -68,6 +71,49 @@ func (s *Service) GetInfo(context.Context, *grpcapi.GetInfoRequest) (*grpcapi.Ge
 	}
 
 	return response, nil
+}
+
+// Create validates and creates a secret without triggering synchronization.
+func (s *Service) Create(ctx context.Context, req *grpcapi.CreateSecretRequest) (*grpcapi.CreateSecretResponse, error) {
+	if req == nil || strings.TrimSpace(req.GetPath()) == "" {
+		return nil, status.Error(codes.InvalidArgument, "path is required")
+	}
+
+	secret, err := s.provider.CreateSecret(ctx, contracts.CreateSecretRequest{
+		Path:        req.GetPath(),
+		Value:       req.GetValue(),
+		Key:         req.GetKey(),
+		Description: req.GetDescription(),
+	})
+	if err != nil {
+		return nil, createSecretError(err)
+	}
+
+	response := &grpcapi.CreateSecretResponse{Path: secret.Path}
+	if secret.WebURL != "" {
+		response.ManagerUrl = &secret.WebURL
+	}
+
+	return response, nil
+}
+
+func createSecretError(err error) error {
+	switch {
+	case errors.Is(err, context.Canceled), status.Code(err) == codes.Canceled:
+		return status.Error(codes.Canceled, "secret creation canceled")
+	case errors.Is(err, context.DeadlineExceeded), status.Code(err) == codes.DeadlineExceeded:
+		return status.Error(codes.DeadlineExceeded, "secret creation deadline exceeded")
+	case errors.Is(err, contracts.ErrInvalidCreateRequest):
+		return status.Error(codes.InvalidArgument, err.Error())
+	case errors.Is(err, contracts.ErrSecretAlreadyExists):
+		return status.Error(codes.AlreadyExists, err.Error())
+	case errors.Is(err, contracts.ErrCreateConflict):
+		return status.Error(codes.Aborted, err.Error())
+	case status.Code(err) == codes.NotFound:
+		return status.Error(codes.FailedPrecondition, "required provider folder was not found")
+	default:
+		return status.Error(codes.Internal, "secret creation failed")
+	}
 }
 
 // Sync triggers the normal synchronization flow on demand.

@@ -1,15 +1,40 @@
 //go:generate mockgen -source=$GOFILE -destination=mocks.go -package=contracts
 package contracts
 
-import "context"
+import (
+	"context"
+	"errors"
+)
+
+var (
+	// ErrInvalidCreateRequest indicates that a provider rejected create request fields.
+	ErrInvalidCreateRequest = errors.New("invalid create secret request")
+	// ErrSecretAlreadyExists indicates that create would replace an existing secret or key.
+	ErrSecretAlreadyExists = errors.New("secret already exists")
+	// ErrCreateConflict indicates that concurrent provider changes prevented a safe create.
+	ErrCreateConflict = errors.New("concurrent secret creation conflict")
+)
 
 type Provider interface {
 	// Definition returns human-readable provider definition.
 	Definition() ProviderDefinition
+	// CreateSecret creates a new secret in the configured synchronization scope.
+	CreateSecret(ctx context.Context, req CreateSecretRequest) (Secret, error)
 	// GetSecretPayload retrieves latest secret payload by provider path returned from ListSecrets.
 	GetSecretPayload(ctx context.Context, path string) ([]byte, error)
 	// ListSecrets lists secret metadata without loading payload.
 	ListSecrets(ctx context.Context) (map[string]Secret, error)
+}
+
+type CreateSecretRequest struct {
+	// Path is the provider-relative path within the synchronization scope.
+	Path string
+	// Value is the secret payload.
+	Value []byte
+	// Key is the Vault KV document key and must be empty for Cloud.ru.
+	Key string
+	// Description is the Cloud.ru secret description and must be empty for Vault.
+	Description string
 }
 
 type Secret struct {
@@ -21,6 +46,8 @@ type Secret struct {
 	FullPath string
 	// Description is the external secret description.
 	Description string
+	// WebURL points to the secret in the provider management UI and is populated only on creation.
+	WebURL string
 }
 
 type ProviderDefinition struct {
