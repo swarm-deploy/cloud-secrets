@@ -17,17 +17,18 @@ func TestMetricsDecorator_CreateSecret(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	provider := NewMockProvider(ctrl)
 	request := CreateSecretRequest{Path: "prod/db", Key: "password", Value: []byte("sensitive")}
-	provider.EXPECT().CreateSecret(gomock.Any(), request).Return("prod/db", nil)
+	wantSecret := Secret{Path: "prod/db"}
+	provider.EXPECT().CreateSecret(gomock.Any(), request).Return(wantSecret, nil)
 
 	metricsGroup := metrics.NewGroup(metrics.CreateGroupParams{Namespace: "test"})
 	registry := prometheus.NewRegistry()
 	require.NoError(t, registry.Register(metricsGroup))
 	decorated := WithMetrics(provider, metricsGroup.Provider)
 
-	path, err := decorated.CreateSecret(context.Background(), request)
+	secret, err := decorated.CreateSecret(context.Background(), request)
 
 	require.NoError(t, err)
-	assert.Equal(t, "prod/db", path)
+	assert.Equal(t, wantSecret, secret)
 	metricFamilies, err := registry.Gather()
 	require.NoError(t, err)
 

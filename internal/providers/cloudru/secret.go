@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -15,14 +16,14 @@ import (
 )
 
 // CreateSecret creates a Cloud.ru Secret Manager secret in the configured scope.
-func (p *Provider) CreateSecret(ctx context.Context, req contracts.CreateSecretRequest) (string, error) {
+func (p *Provider) CreateSecret(ctx context.Context, req contracts.CreateSecretRequest) (contracts.Secret, error) {
 	if req.Key != "" {
-		return "", fmt.Errorf("%w: key must be empty for Cloud.ru", contracts.ErrInvalidCreateRequest)
+		return contracts.Secret{}, fmt.Errorf("%w: key must be empty for Cloud.ru", contracts.ErrInvalidCreateRequest)
 	}
 
 	logicalPath, fullPath, err := p.createSecretPath(req.Path)
 	if err != nil {
-		return "", err
+		return contracts.Secret{}, err
 	}
 
 	_, err = p.secretService.Create(ctx, &v2.CreateSecretRequest{
@@ -34,16 +35,39 @@ func (p *Provider) CreateSecret(ctx context.Context, req contracts.CreateSecretR
 	if err != nil {
 		code := status.Code(err)
 		if code == codes.AlreadyExists {
-			return "", fmt.Errorf("%w: Cloud.ru secret %q", contracts.ErrSecretAlreadyExists, logicalPath)
+			return contracts.Secret{}, fmt.Errorf("%w: Cloud.ru secret %q", contracts.ErrSecretAlreadyExists, logicalPath)
 		}
 		if code == codes.InvalidArgument {
-			return "", fmt.Errorf("%w: Cloud.ru rejected path %q: %w", contracts.ErrInvalidCreateRequest, logicalPath, err)
+			return contracts.Secret{}, fmt.Errorf(
+				"%w: Cloud.ru rejected path %q: %w",
+				contracts.ErrInvalidCreateRequest,
+				logicalPath,
+				err,
+			)
 		}
 
-		return "", fmt.Errorf("create Cloud.ru secret %q: %w", logicalPath, err)
+		return contracts.Secret{}, fmt.Errorf("create Cloud.ru secret %q: %w", logicalPath, err)
 	}
 
-	return logicalPath, nil
+	return contracts.Secret{
+		Path:        logicalPath,
+		FullPath:    fullPath,
+		Description: req.Description,
+		WebURL:      p.secretWebURL(fullPath),
+	}, nil
+}
+
+func (p *Provider) secretWebURL(path string) string {
+	managerURL := url.URL{
+		Scheme: "https",
+		Host:   "console.cloud.ru",
+		Path:   "/spa/secret-manager/show/" + path,
+	}
+	query := managerURL.Query()
+	query.Set("projectId", p.cfg.ProjectID)
+	managerURL.RawQuery = query.Encode()
+
+	return managerURL.String()
 }
 
 func (p *Provider) GetSecretPayload(ctx context.Context, key string) ([]byte, error) {

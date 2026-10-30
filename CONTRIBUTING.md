@@ -68,7 +68,7 @@ type Provider interface {
 	// Definition returns human-readable provider definition.
 	Definition() ProviderDefinition
 	// CreateSecret creates a new secret in the configured synchronization scope.
-	CreateSecret(ctx context.Context, req CreateSecretRequest) (string, error)
+	CreateSecret(ctx context.Context, req CreateSecretRequest) (Secret, error)
 	// GetSecretPayload retrieves latest secret payload by provider path returned from ListSecrets.
 	GetSecretPayload(ctx context.Context, path string) ([]byte, error)
 	// ListSecrets lists secret metadata without loading payload.
@@ -82,6 +82,8 @@ type Secret struct {
 	Path string
 	// FullPath is the full secret path in external storage.
 	FullPath string
+	// WebURL points to the secret in the provider management UI and is populated only on creation.
+	WebURL string
 }
 
 type ProviderDefinition struct {

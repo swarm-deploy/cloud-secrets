@@ -156,6 +156,7 @@ func TestService_Create(t *testing.T) {
 		request  *grpcapi.CreateSecretRequest
 		setup    func(*contracts.MockProvider)
 		wantPath string
+		wantURL  string
 		wantCode codes.Code
 	}{
 		{
@@ -172,7 +173,23 @@ func TestService_Create(t *testing.T) {
 					Value:       []byte("sensitive"),
 					Key:         "password",
 					Description: "database password",
-				}).Return("prod/db", nil)
+				}).Return(contracts.Secret{
+					Path:   "prod/db",
+					WebURL: "https://manager.example.com/prod/db",
+				}, nil)
+			},
+			wantPath: "prod/db",
+			wantURL:  "https://manager.example.com/prod/db",
+			wantCode: codes.OK,
+		},
+		{
+			name:    "omits empty manager URL",
+			request: &grpcapi.CreateSecretRequest{Path: "prod/db"},
+			setup: func(provider *contracts.MockProvider) {
+				provider.EXPECT().CreateSecret(gomock.Any(), gomock.Any()).Return(
+					contracts.Secret{Path: "prod/db"},
+					nil,
+				)
 			},
 			wantPath: "prod/db",
 			wantCode: codes.OK,
@@ -192,7 +209,7 @@ func TestService_Create(t *testing.T) {
 			request: &grpcapi.CreateSecretRequest{Path: "prod/db"},
 			setup: func(provider *contracts.MockProvider) {
 				provider.EXPECT().CreateSecret(gomock.Any(), gomock.Any()).Return(
-					"",
+					contracts.Secret{},
 					fmt.Errorf("%w: key is required", contracts.ErrInvalidCreateRequest),
 				)
 			},
@@ -203,7 +220,7 @@ func TestService_Create(t *testing.T) {
 			request: &grpcapi.CreateSecretRequest{Path: "prod/db"},
 			setup: func(provider *contracts.MockProvider) {
 				provider.EXPECT().CreateSecret(gomock.Any(), gomock.Any()).Return(
-					"",
+					contracts.Secret{},
 					fmt.Errorf("%w: prod/db", contracts.ErrSecretAlreadyExists),
 				)
 			},
@@ -213,7 +230,7 @@ func TestService_Create(t *testing.T) {
 			name:    "maps concurrent conflict",
 			request: &grpcapi.CreateSecretRequest{Path: "prod/db"},
 			setup: func(provider *contracts.MockProvider) {
-				provider.EXPECT().CreateSecret(gomock.Any(), gomock.Any()).Return("", contracts.ErrCreateConflict)
+				provider.EXPECT().CreateSecret(gomock.Any(), gomock.Any()).Return(contracts.Secret{}, contracts.ErrCreateConflict)
 			},
 			wantCode: codes.Aborted,
 		},
@@ -221,7 +238,7 @@ func TestService_Create(t *testing.T) {
 			name:    "hides provider failure",
 			request: &grpcapi.CreateSecretRequest{Path: "prod/db"},
 			setup: func(provider *contracts.MockProvider) {
-				provider.EXPECT().CreateSecret(gomock.Any(), gomock.Any()).Return("", providerFailure)
+				provider.EXPECT().CreateSecret(gomock.Any(), gomock.Any()).Return(contracts.Secret{}, providerFailure)
 			},
 			wantCode: codes.Internal,
 		},
@@ -229,7 +246,7 @@ func TestService_Create(t *testing.T) {
 			name:    "preserves cancellation",
 			request: &grpcapi.CreateSecretRequest{Path: "prod/db"},
 			setup: func(provider *contracts.MockProvider) {
-				provider.EXPECT().CreateSecret(gomock.Any(), gomock.Any()).Return("", context.Canceled)
+				provider.EXPECT().CreateSecret(gomock.Any(), gomock.Any()).Return(contracts.Secret{}, context.Canceled)
 			},
 			wantCode: codes.Canceled,
 		},
@@ -237,7 +254,7 @@ func TestService_Create(t *testing.T) {
 			name:    "preserves deadline",
 			request: &grpcapi.CreateSecretRequest{Path: "prod/db"},
 			setup: func(provider *contracts.MockProvider) {
-				provider.EXPECT().CreateSecret(gomock.Any(), gomock.Any()).Return("", context.DeadlineExceeded)
+				provider.EXPECT().CreateSecret(gomock.Any(), gomock.Any()).Return(contracts.Secret{}, context.DeadlineExceeded)
 			},
 			wantCode: codes.DeadlineExceeded,
 		},
@@ -260,6 +277,8 @@ func TestService_Create(t *testing.T) {
 				require.NoError(t, err)
 				require.NotNil(t, response)
 				assert.Equal(t, tt.wantPath, response.GetPath())
+				assert.Equal(t, tt.wantURL, response.GetManagerUrl())
+				assert.Equal(t, tt.wantURL != "", response.ManagerUrl != nil)
 				return
 			}
 

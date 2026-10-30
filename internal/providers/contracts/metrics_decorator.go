@@ -30,7 +30,7 @@ func (d *metricsDecorator) Definition() ProviderDefinition {
 	return d.provider.Definition()
 }
 
-func (d *metricsDecorator) CreateSecret(ctx context.Context, req CreateSecretRequest) (string, error) {
+func (d *metricsDecorator) CreateSecret(ctx context.Context, req CreateSecretRequest) (Secret, error) {
 	startedAt := time.Now()
 	defer func() {
 		d.metrics.RecordRequest(operationCreateSecret, time.Since(startedAt))

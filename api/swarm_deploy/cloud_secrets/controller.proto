@@ -52,4 +52,6 @@ message CreateSecretRequest {
 
 message CreateSecretResponse {
   string path = 1;
+
+  optional string manager_url = 2;
 }

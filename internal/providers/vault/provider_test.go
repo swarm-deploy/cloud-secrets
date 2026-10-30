@@ -133,15 +133,15 @@ func TestProvider_CreateSecret(t *testing.T) {
 			}
 
 			provider := &Provider{client: client}
-			path, err := provider.CreateSecret(context.Background(), tt.request)
+			secret, err := provider.CreateSecret(context.Background(), tt.request)
 
 			if tt.wantErr == nil {
 				require.NoError(t, err)
-				assert.Equal(t, tt.wantPath, path)
+				assert.Equal(t, contracts.Secret{Path: tt.wantPath}, secret)
 				return
 			}
 
-			assert.Empty(t, path)
+			assert.Empty(t, secret)
 			require.Error(t, err)
 			assert.ErrorIs(t, err, tt.wantErr)
 			if tt.wantMessage != "" {
@@ -170,13 +170,13 @@ func TestProvider_CreatedSecretUsesExistingReadAndListPaths(t *testing.T) {
 	}, nil)
 
 	provider := &Provider{client: client}
-	createdPath, err := provider.CreateSecret(context.Background(), contracts.CreateSecretRequest{
+	createdSecret, err := provider.CreateSecret(context.Background(), contracts.CreateSecretRequest{
 		Path:  "prod/db",
 		Key:   "password",
 		Value: []byte("sensitive"),
 	})
 	require.NoError(t, err)
-	assert.Equal(t, "prod/db", createdPath)
+	assert.Equal(t, contracts.Secret{Path: "prod/db"}, createdSecret)
 
 	secrets, err := provider.ListSecrets(context.Background())
 	require.NoError(t, err)

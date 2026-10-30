@@ -79,7 +79,7 @@ func (s *Service) Create(ctx context.Context, req *grpcapi.CreateSecretRequest) 
 		return nil, status.Error(codes.InvalidArgument, "path is required")
 	}
 
-	path, err := s.provider.CreateSecret(ctx, contracts.CreateSecretRequest{
+	secret, err := s.provider.CreateSecret(ctx, contracts.CreateSecretRequest{
 		Path:        req.GetPath(),
 		Value:       req.GetValue(),
 		Key:         req.GetKey(),
@@ -89,7 +89,12 @@ func (s *Service) Create(ctx context.Context, req *grpcapi.CreateSecretRequest) 
 		return nil, createSecretError(err)
 	}
 
-	return &grpcapi.CreateSecretResponse{Path: path}, nil
+	response := &grpcapi.CreateSecretResponse{Path: secret.Path}
+	if secret.WebURL != "" {
+		response.ManagerUrl = &secret.WebURL
+	}
+
+	return response, nil
 }
 
 func createSecretError(err error) error {

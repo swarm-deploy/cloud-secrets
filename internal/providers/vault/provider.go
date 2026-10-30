@@ -44,39 +44,54 @@ func (p *Provider) Definition() contracts.ProviderDefinition {
 }
 
 // CreateSecret creates a new key in a Vault KV v2 document.
-func (p *Provider) CreateSecret(ctx context.Context, req contracts.CreateSecretRequest) (string, error) {
+func (p *Provider) CreateSecret(ctx context.Context, req contracts.CreateSecretRequest) (contracts.Secret, error) {
 	path, err := normalizeCreatePath(req.Path)
 	if err != nil {
-		return "", err
+		return contracts.Secret{}, err
 	}
 
 	key := strings.TrimSpace(req.Key)
 	if key == "" {
-		return "", fmt.Errorf("%w: key is required for Vault KV v2", contracts.ErrInvalidCreateRequest)
+		return contracts.Secret{}, fmt.Errorf("%w: key is required for Vault KV v2", contracts.ErrInvalidCreateRequest)
 	}
 	if strings.Contains(key, "/") {
-		return "", fmt.Errorf("%w: key must not contain /", contracts.ErrInvalidCreateRequest)
+		return contracts.Secret{}, fmt.Errorf("%w: key must not contain /", contracts.ErrInvalidCreateRequest)
 	}
 	if req.Description != "" {
-		return "", fmt.Errorf("%w: description is not supported by Vault KV v2", contracts.ErrInvalidCreateRequest)
+		return contracts.Secret{}, fmt.Errorf(
+			"%w: description is not supported by Vault KV v2",
+			contracts.ErrInvalidCreateRequest,
+		)
 	}
 	if !utf8.Valid(req.Value) {
-		return "", fmt.Errorf("%w: value must be valid UTF-8 for Vault KV v2", contracts.ErrInvalidCreateRequest)
+		return contracts.Secret{}, fmt.Errorf(
+			"%w: value must be valid UTF-8 for Vault KV v2",
+			contracts.ErrInvalidCreateRequest,
+		)
 	}
 
 	err = p.client.CreateSecretKey(ctx, path, key, req.Value)
 	if err != nil {
 		switch {
 		case errors.Is(err, vaultclient.ErrSecretKeyExists):
-			return "", fmt.Errorf("%w: Vault document %q already contains key %q", contracts.ErrSecretAlreadyExists, path, key)
+			return contracts.Secret{}, fmt.Errorf(
+				"%w: Vault document %q already contains key %q",
+				contracts.ErrSecretAlreadyExists,
+				path,
+				key,
+			)
 		case errors.Is(err, vaultclient.ErrCASConflict):
-			return "", fmt.Errorf("%w: Vault document %q changed concurrently", contracts.ErrCreateConflict, path)
+			return contracts.Secret{}, fmt.Errorf(
+				"%w: Vault document %q changed concurrently",
+				contracts.ErrCreateConflict,
+				path,
+			)
 		default:
-			return "", fmt.Errorf("create Vault secret %q key %q: %w", path, key, err)
+			return contracts.Secret{}, fmt.Errorf("create Vault secret %q key %q: %w", path, key, err)
 		}
 	}
 
-	return path, nil
+	return contracts.Secret{Path: path}, nil
 }
 
 func (p *Provider) GetSecretPayload(ctx context.Context, path string) ([]byte, error) {

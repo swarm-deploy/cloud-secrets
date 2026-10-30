@@ -40,6 +40,7 @@ message CreateSecretRequest {
 
 message CreateSecretResponse {
   string path = 1;
+  optional string manager_url = 2;
 }
 ```
 
@@ -49,7 +50,7 @@ message CreateSecretResponse {
 
 The response summarizes created, updated, removed, and unchanged logical secrets. Removed historical secret versions are not included in `removed`.
 
-`Secrets.Create` creates a secret only in the configured external provider. It does not run synchronization and does not mutate Docker Swarm. `path` is relative to the provider's configured synchronization scope, `value` is passed as the secret payload, and the response contains only the accepted normalized path. Invalid provider-specific fields return `INVALID_ARGUMENT`; an existing secret or Vault key returns `ALREADY_EXISTS`.
+`Secrets.Create` creates a secret only in the configured external provider. It does not run synchronization and does not mutate Docker Swarm. `path` is relative to the provider's configured synchronization scope, `value` is passed as the secret payload, and the response contains the accepted normalized path. `manager_url` is returned when the provider exposes a direct management UI link for the created secret. Invalid provider-specific fields return `INVALID_ARGUMENT`; an existing secret or Vault key returns `ALREADY_EXISTS`.
 
 Provider behavior differs:
 

@@ -139,15 +139,21 @@ func TestProvider_CreateSecret(t *testing.T) {
 			}
 
 			provider := Provider{cfg: tt.config, secretService: client}
-			path, err := provider.CreateSecret(context.Background(), tt.request)
+			secret, err := provider.CreateSecret(context.Background(), tt.request)
 
 			if tt.wantErr == nil {
 				require.NoError(t, err)
-				assert.Equal(t, tt.wantPath, path)
+				assert.Equal(t, contracts.Secret{
+					Path:        tt.wantPath,
+					FullPath:    tt.wantFullPath,
+					Description: tt.request.Description,
+					WebURL: "https://console.cloud.ru/spa/secret-manager/show/" + tt.wantFullPath +
+						"?projectId=" + tt.config.ProjectID,
+				}, secret)
 				return
 			}
 
-			assert.Empty(t, path)
+			assert.Empty(t, secret)
 			require.Error(t, err)
 			assert.ErrorIs(t, err, tt.wantErr)
 			assert.NotContains(t, err.Error(), "sensitive")
@@ -198,19 +204,24 @@ func TestProvider_CreatedSecretUsesExistingReadAndListPaths(t *testing.T) {
 		secretService: client,
 	}
 
-	createdPath, err := provider.CreateSecret(context.Background(), contracts.CreateSecretRequest{
+	createdSecret, err := provider.CreateSecret(context.Background(), contracts.CreateSecretRequest{
 		Path:  "api/db/password",
 		Value: []byte("sensitive"),
 	})
 	require.NoError(t, err)
-	assert.Equal(t, "api/db/password", createdPath)
+	assert.Equal(t, contracts.Secret{
+		Path:     "api/db/password",
+		FullPath: "prod/apps/api/db/password",
+		WebURL:   "https://console.cloud.ru/spa/secret-manager/show/prod/apps/api/db/password?projectId=project-id",
+	}, createdSecret)
 
 	secrets, err := provider.ListSecrets(context.Background())
 	require.NoError(t, err)
 	require.Len(t, secrets, 1)
 	assert.Equal(t, "api/db/password", secrets["prod/apps/api/db/password"].Path)
+	assert.Empty(t, secrets["prod/apps/api/db/password"].WebURL)
 
-	payload, err := provider.GetSecretPayload(context.Background(), createdPath)
+	payload, err := provider.GetSecretPayload(context.Background(), createdSecret.Path)
 	require.NoError(t, err)
 	assert.Equal(t, sha256.Sum256([]byte("sensitive")), sha256.Sum256(payload))
 }
